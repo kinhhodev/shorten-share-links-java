@@ -1,3 +1,12 @@
+--liquibase formatted sql
+
+--changeset shortlink:1
+--comment: Initial schema (users, topics, links, topic_shares)
+--rollback DROP TABLE IF EXISTS topic_shares CASCADE;
+--rollback DROP TABLE IF EXISTS links CASCADE;
+--rollback DROP TABLE IF EXISTS topics CASCADE;
+--rollback DROP TABLE IF EXISTS users CASCADE;
+--rollback DROP EXTENSION IF EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE users (

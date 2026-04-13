@@ -25,7 +25,7 @@ services:
       timeout: 3s
       retries: 5
 
-  app:
+  backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -41,12 +41,24 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production-use-openssl-rand-base64-48}
-      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
+      # Public URL for short links in API responses (browser hits UI on port 80 by default)
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ""
+    ports:
+      - "80:80"
+    depends_on:
+      - app
 
 volumes:
   pgdata:

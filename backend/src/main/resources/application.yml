@@ -17,9 +17,8 @@ spring:
         jdbc:
           time_zone: UTC
         default_schema: public
-  flyway:
-    enabled: true
-    locations: classpath:db/migration
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
   data:
     redis:
       host: ${REDIS_HOST:localhost}

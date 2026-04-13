@@ -53,8 +53,9 @@ public class SecurityConfig {
                                         .authenticated()
                                         .anyRequest()
                                         .permitAll())
-                .addFilterBefore(rateLimitFilter, JwtAuthenticationFilter.class)
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                // Register JWT before UPA first so JwtAuthenticationFilter has a chain order, then rate-limit before JWT.
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(rateLimitFilter, JwtAuthenticationFilter.class);
         return http.build();
     }
 }

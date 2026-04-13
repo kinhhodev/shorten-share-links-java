@@ -1,6 +1,6 @@
 # shorten-share-links
 
-URL shortener: **Spring Boot** API under **`backend/`**, **React (Vite)** UI under **`frontend/`**. Docker Compose at the repository root runs PostgreSQL, Redis, and the API.
+URL shortener: **Spring Boot** API under **`backend/`**, **React (Vite)** UI under **`frontend/`**. **`docker-compose.yml`** at the repository root runs PostgreSQL, Redis, the API, and the **nginx** frontend image.
 
 ## Prerequisites
 
@@ -29,6 +29,34 @@ npm run build
 
 Serve the static output in `frontend/dist/` behind any static host; set **`VITE_API_BASE_URL`** to your API origin if it is not same-origin (see `frontend/.env.example`).
 
+### Frontend (Docker)
+
+The **`frontend/Dockerfile`** builds the Vite app and serves it with **nginx**. **`frontend/docker/nginx.conf`** proxies **`/api`** and **`/l`** to the Spring Boot service so the browser can use **relative** API URLs (no CORS issues for normal usage).
+
+From the **repository root**:
+
+```bash
+docker compose build web
+docker compose up -d web
+```
+
+Usually you run the full stack:
+
+```bash
+docker compose up --build
+```
+
+- **UI:** [http://localhost](http://localhost) (port **80**)
+- **API (direct):** [http://localhost:8080](http://localhost:8080)
+
+Set **`PUBLIC_BASE_URL`** so short links in JSON match how users reach the app (default **`http://localhost`** when nginx listens on port 80). If you map the UI to another host port (e.g. **`8081:80`**), set e.g. `PUBLIC_BASE_URL=http://localhost:8081`.
+
+To build the UI with a fixed API origin instead of nginx proxying (not typical for this compose setup), pass a build arg:
+
+```bash
+docker compose build --build-arg VITE_API_BASE_URL=https://api.example.com web
+```
+
 ## Build (backend, local)
 
 From the repository root:
@@ -54,16 +82,19 @@ java -jar target/shorten-share-links-*.jar
 
 ## Deploy (Docker)
 
-From the repository root, build the Spring Boot image and start Postgres, Redis, and the app:
+From the **repository root**, build and start Postgres, Redis, the API, and the frontend:
 
 ```bash
 docker compose up --build
 ```
 
-The API listens on **http://localhost:8080**. Override secrets and URLs as needed, for example:
+- **Frontend (nginx):** **http://localhost** (port 80)
+- **API:** **http://localhost:8080**
+
+Override secrets and public URL for short links as needed:
 
 ```bash
-JWT_SECRET="$(openssl rand -base64 48)" PUBLIC_BASE_URL=http://localhost:8080 docker compose up --build
+JWT_SECRET="$(openssl rand -base64 48)" PUBLIC_BASE_URL=http://localhost docker compose up --build
 ```
 
 Stop and remove containers:
