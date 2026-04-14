@@ -19,47 +19,31 @@ export interface RegisterRequest {
   displayName?: string;
 }
 
-export interface Topic {
-  publicId: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  createdAt: string;
-}
-
 export interface Link {
   publicId: string;
-  shortSlug: string;
+  topic: string;
+  slug: string;
   shortUrl: string;
   originalUrl: string;
-  topicPublicId: string;
-  topicSlug: string;
   createdAt: string;
-}
-
-export type TopicPermission = 'VIEW' | 'EDIT';
-
-export interface TopicShare {
-  shareId: string;
-  userEmail: string;
-  permission: TopicPermission;
-}
-
-export interface CreateTopicRequest {
-  name: string;
-  slug: string;
-  description?: string;
 }
 
 export interface CreateLinkRequest {
-  shortSlug: string;
+  topic?: string;
+  slug: string;
   originalUrl: string;
-  topicPublicId: string;
 }
 
-export interface ShareTopicRequest {
-  userEmail: string;
-  permission: TopicPermission;
+/** Public guest create — matches `CreateGuestLinkRequest` (Jackson camelCase). */
+export interface CreateGuestLinkRequest {
+  /** Omit or blank → backend uses "_" */
+  topic?: string;
+  slug: string;
+  originalUrl: string;
+}
+
+export interface GuestLinkCreatedResponse {
+  shortUrl: string;
 }
 
 export interface ProblemDetailBody {

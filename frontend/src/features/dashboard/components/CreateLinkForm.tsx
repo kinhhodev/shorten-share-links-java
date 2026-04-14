@@ -3,89 +3,76 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
-import { Select } from '@/components/ui/Select';
-import type { Topic } from '@/services/api/types';
 import { getErrorMessage, linksApi } from '@/services/api';
 
-type Props = {
-  topics: Topic[];
-};
-
-export function CreateLinkForm({ topics }: Props) {
+export function CreateLinkForm() {
   const queryClient = useQueryClient();
-  const [topicPublicId, setTopicPublicId] = useState('');
-  const [shortSlug, setShortSlug] = useState('');
+  const [topic, setTopic] = useState('');
+  const [slug, setSlug] = useState('');
   const [originalUrl, setOriginalUrl] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [createdShortUrl, setCreatedShortUrl] = useState<string | null>(null);
 
   const mutation = useMutation({
     mutationFn: () =>
       linksApi.createLink({
-        topicPublicId,
-        shortSlug,
+        ...(topic.trim() ? { topic: topic.trim() } : {}),
+        slug,
         originalUrl,
       }),
-    onSuccess: () => {
-      setShortSlug('');
+    onSuccess: (data) => {
+      setCreatedShortUrl(data.shortUrl);
+      setSlug('');
       setOriginalUrl('');
       setError(null);
-      void queryClient.invalidateQueries({ queryKey: ['links', topicPublicId] });
-      void queryClient.invalidateQueries({ queryKey: ['topics'] });
+      void queryClient.invalidateQueries({ queryKey: ['links', 'mine'] });
     },
     onError: (e) => setError(getErrorMessage(e)),
   });
 
-  if (topics.length === 0) {
-    return (
-      <p className="text-sm font-bold text-neutral-700">
-        Create a topic first, then you can add short links.
-      </p>
-    );
-  }
-
   return (
     <form
-      className="grid gap-3 md:grid-cols-2"
+      className="flex w-full flex-col gap-3"
       onSubmit={(e) => {
         e.preventDefault();
-        if (!topicPublicId) {
-          setError('Pick a topic');
-          return;
-        }
         setError(null);
+        setCreatedShortUrl(null);
         mutation.mutate();
       }}
     >
-      <div className="md:col-span-2">
-        <Label htmlFor="link-topic">Topic</Label>
-        <Select
-          id="link-topic"
-          required
-          value={topicPublicId}
-          onChange={(e) => setTopicPublicId(e.target.value)}
-        >
-          <option value="">Select topic…</option>
-          {topics.map((t) => (
-            <option key={t.publicId} value={t.publicId}>
-              {t.name} ({t.slug})
-            </option>
-          ))}
-        </Select>
-      </div>
-      <div>
-        <Label htmlFor="short-slug">Short slug</Label>
+      <div className="w-full">
+        <Label htmlFor="link-topic">Topic (optional)</Label>
         <Input
-          id="short-slug"
+          id="link-topic"
+          value={topic}
+          onChange={(e) => setTopic(e.target.value)}
+          placeholder="e.g. toeic — leave blank for _"
+          autoComplete="off"
+        />
+        <p className="mt-1 text-xs font-semibold text-neutral-600">
+          Chủ đề — segment đầu trong URL <span className="font-mono">/r/&lt;topic&gt;/&lt;slug&gt;</span>. Để trống =
+          <span className="font-mono"> _</span>.
+        </p>
+      </div>
+      <div className="w-full">
+        <Label htmlFor="link-slug">Slug</Label>
+        <Input
+          id="link-slug"
           required
-          value={shortSlug}
-          onChange={(e) => setShortSlug(e.target.value)}
+          minLength={3}
+          maxLength={60}
+          value={slug}
+          onChange={(e) => setSlug(e.target.value)}
           placeholder="spring-sale"
         />
+        <p className="mt-1 text-xs font-semibold text-neutral-600">
+          3–60 ký tự. Trùng trong cùng topic → <span className="font-mono">name-1</span>, <span className="font-mono">name-2</span>, …
+        </p>
       </div>
-      <div>
-        <Label htmlFor="original-url">Destination URL</Label>
+      <div className="w-full">
+        <Label htmlFor="link-original-url">Destination URL</Label>
         <Input
-          id="original-url"
+          id="link-original-url"
           type="url"
           required
           value={originalUrl}
@@ -94,13 +81,25 @@ export function CreateLinkForm({ topics }: Props) {
         />
       </div>
       {error && (
-        <p className="md:col-span-2 border-2 border-black bg-[#fecaca] px-3 py-2 text-sm font-semibold">
-          {error}
-        </p>
+        <p className="border-2 border-black bg-[#fecaca] px-3 py-2 text-sm font-semibold">{error}</p>
       )}
-      <div className="md:col-span-2">
+      {createdShortUrl && (
+        <div className="border-4 border-black bg-[#d1fae5] p-4">
+          <p className="mb-2 text-sm font-bold uppercase text-neutral-800">Short URL</p>
+          <p className="break-all font-mono text-sm font-semibold text-black">{createdShortUrl}</p>
+          <Button
+            type="button"
+            variant="secondary"
+            className="mt-3"
+            onClick={() => void navigator.clipboard.writeText(createdShortUrl)}
+          >
+            Copy link
+          </Button>
+        </div>
+      )}
+      <div>
         <Button type="submit" disabled={mutation.isPending}>
-          {mutation.isPending ? 'Saving…' : '+ Create short link'}
+          {mutation.isPending ? 'Saving…' : 'Create short link'}
         </Button>
       </div>
     </form>

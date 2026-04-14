@@ -2,6 +2,8 @@
 
 --changeset shortlink:1
 --comment: Initial schema (users, topics, links, topic_shares)
+--preconditions onFail:MARK_RAN
+--precondition-sql-check expectedResult:0 SELECT COUNT(*)::integer FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'users'
 --rollback DROP TABLE IF EXISTS topic_shares CASCADE;
 --rollback DROP TABLE IF EXISTS links CASCADE;
 --rollback DROP TABLE IF EXISTS topics CASCADE;

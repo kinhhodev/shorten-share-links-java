@@ -4,7 +4,7 @@ import { Button } from './Button';
 
 type ModalProps = {
   open: boolean;
-  title: string;
+  title?: string;
   onClose: () => void;
   children: ReactNode;
   className?: string;
@@ -27,7 +27,7 @@ export function Modal({ open, title, onClose, children, className }: ModalProps)
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="modal-title"
+      aria-labelledby={title ? 'modal-title' : undefined}
     >
       <button
         type="button"
@@ -41,10 +41,12 @@ export function Modal({ open, title, onClose, children, className }: ModalProps)
           className
         )}
       >
-        <div className="mb-4 flex items-start justify-between gap-4">
-          <h2 id="modal-title" className="font-display text-xl uppercase">
-            {title}
-          </h2>
+        <div className={clsx('flex items-start justify-between gap-4', title ? 'mb-4' : 'mb-0 justify-end')}>
+          {title ? (
+            <h2 id="modal-title" className="font-display text-xl uppercase">
+              {title}
+            </h2>
+          ) : null}
           <Button type="button" variant="ghost" className="!px-2 !py-1 text-sm" onClick={onClose}>
             ✕
           </Button>

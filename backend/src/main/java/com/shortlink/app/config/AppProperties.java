@@ -16,6 +16,7 @@ public class AppProperties {
     private final RateLimit rateLimit = new RateLimit();
     private final LinkCache linkCache = new LinkCache();
     private final OAuth2 oauth2 = new OAuth2();
+    private final GuestPublic guestPublic = new GuestPublic();
 
     /** Used to build absolute short URLs in API responses (e.g. https://go.example.com). */
     @Getter
@@ -32,7 +33,8 @@ public class AppProperties {
     @Getter
     @Setter
     public static class Redirect {
-        private String pathPrefix = "/l";
+        /** First segment of public redirect path; full URL is {@code {base}{pathPrefix}/{topic}/{linkSlug}}. */
+        private String pathPrefix = "/r";
     }
 
     @Getter
@@ -53,5 +55,16 @@ public class AppProperties {
     public static class OAuth2 {
         /** Frontend or deep-link URL to receive JWT after social login (query param: token). */
         private String postLoginRedirectUri = "http://localhost:3000/auth/callback";
+    }
+
+    /** Public guest link creation ({@code POST /api/public/links}) and cleanup. */
+    @Getter
+    @Setter
+    public static class GuestPublic {
+        private int createRequestsPerWindow = 5;
+        private int createWindowSeconds = 10;
+        private int linkTtlDays = 30;
+        /** Spring {@code @Scheduled} cron (default: daily 03:00 UTC). */
+        private String cleanupCron = "0 0 3 * * *";
     }
 }

@@ -9,10 +9,10 @@ import lombok.Value;
 @Builder
 public class LinkResponse {
     UUID publicId;
-    String shortSlug;
+    /** Path segment chủ đề trong URL {@code /r/{topic}/{slug}}. */
+    String topic;
+    String slug;
     String shortUrl;
     String originalUrl;
-    UUID topicPublicId;
-    String topicSlug;
     Instant createdAt;
 }

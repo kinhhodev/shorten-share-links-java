@@ -16,9 +16,16 @@ public class RedirectController {
 
     private final RedirectService redirectService;
 
-    @GetMapping("/l/{shortSlug}")
-    public ResponseEntity<Void> redirect(@PathVariable String shortSlug) {
-        String target = redirectService.resolveAndRecordClick(shortSlug);
+    @GetMapping("/r/{topic}/{linkSlug}")
+    public ResponseEntity<Void> redirectByTopicAndSlug(@PathVariable String topic, @PathVariable String linkSlug) {
+        String target = redirectService.resolveAndRecordClick(topic, linkSlug);
+        return ResponseEntity.status(HttpStatus.FOUND).header(HttpHeaders.LOCATION, URI.create(target).toString()).build();
+    }
+
+    /** Legacy single-segment URLs ({@code /l/{slug}}) resolve as {@code /r/_/{slug}}. */
+    @GetMapping("/l/{linkSlug}")
+    public ResponseEntity<Void> redirectLegacy(@PathVariable String linkSlug) {
+        String target = redirectService.resolveAndRecordClick("_", linkSlug);
         return ResponseEntity.status(HttpStatus.FOUND).header(HttpHeaders.LOCATION, URI.create(target).toString()).build();
     }
 }

@@ -5,20 +5,15 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
-import org.hibernate.validator.constraints.URL;
 
 @Getter
 @Setter
-public class CreateLinkRequest {
+public class CreateGuestLinkRequest {
 
     /** Topic/chủ đề path segment; omit or blank for default {@code _}. */
     @Size(max = 100)
     private String topic;
 
-    /**
-     * Requested base slug (lower-cased server-side). Max 60 so a numeric suffix ({@code -1}, {@code -2}, …) can be
-     * appended while staying within the 64-character {@code links.slug} column.
-     */
     @NotBlank
     @Size(min = 3, max = 60)
     @Pattern(
@@ -27,7 +22,6 @@ public class CreateLinkRequest {
     private String slug;
 
     @NotBlank
-    @URL(regexp = "^(https?://).+", message = "URL must start with http:// or https://")
     @Size(max = 4096)
     private String originalUrl;
 }

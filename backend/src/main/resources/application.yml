@@ -37,12 +37,17 @@ app:
     secret: ${JWT_SECRET:change-me-use-at-least-256-bits-in-production-please-change-this-secret-key-now}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}
   redirect:
-    path-prefix: /l
+    path-prefix: /r
   rate-limit:
     requests-per-window: ${RATE_LIMIT_REQUESTS:120}
     window-seconds: ${RATE_LIMIT_WINDOW_SECONDS:60}
   link-cache:
     ttl-seconds: ${LINK_CACHE_TTL_SECONDS:3600}
+  guest-public:
+    create-requests-per-window: ${GUEST_CREATE_RATE_LIMIT:5}
+    create-window-seconds: ${GUEST_CREATE_RATE_WINDOW_SECONDS:10}
+    link-ttl-days: ${GUEST_LINK_TTL_DAYS:30}
+    cleanup-cron: "0 0 3 * * *"
   oauth2:
     post-login-redirect-uri: ${OAUTH2_REDIRECT_URI:http://localhost:3000/auth/callback}
 

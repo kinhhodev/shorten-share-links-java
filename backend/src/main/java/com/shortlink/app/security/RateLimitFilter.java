@@ -1,6 +1,7 @@
 package com.shortlink.app.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.shortlink.app.config.AppProperties;
 import com.shortlink.app.service.RedisRateLimiterService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -26,30 +27,47 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     private final RedisRateLimiterService rateLimiterService;
     private final ObjectMapper objectMapper;
+    private final AppProperties appProperties;
 
     @Override
     protected void doFilterInternal(
             @NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
             throws ServletException, IOException {
         String path = request.getRequestURI();
+        if ("POST".equalsIgnoreCase(request.getMethod()) && path.startsWith("/api/public/links")) {
+            String clientKey = resolveClientKey(request);
+            var gp = appProperties.getGuestPublic();
+            if (!rateLimiterService.allow(
+                    "guest-create", clientKey, gp.getCreateRequestsPerWindow(), gp.getCreateWindowSeconds())) {
+                writeTooManyRequests(response);
+                return;
+            }
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String bucket = bucketFor(path);
         if (bucket != null) {
             String clientKey = resolveClientKey(request);
             if (!rateLimiterService.allow(bucket, clientKey)) {
-                ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, "Rate limit exceeded");
-                pd.setTitle("rate_limited");
-                pd.setProperty("timestamp", Instant.now());
-                response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
-                response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
-                objectMapper.writeValue(response.getOutputStream(), pd);
+                writeTooManyRequests(response);
                 return;
             }
         }
         filterChain.doFilter(request, response);
     }
 
+    private void writeTooManyRequests(HttpServletResponse response) throws IOException {
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, "Rate limit exceeded");
+        pd.setTitle("rate_limited");
+        pd.setProperty("timestamp", Instant.now());
+        response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
+        response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+        objectMapper.writeValue(response.getOutputStream(), pd);
+    }
+
     private String bucketFor(String path) {
-        if (path.startsWith("/l/")) {
+        if (path.startsWith("/l/") || path.startsWith("/r/")) {
             return "redirect";
         }
         if (path.startsWith("/api/v1/auth/register") || path.startsWith("/api/v1/auth/login")) {

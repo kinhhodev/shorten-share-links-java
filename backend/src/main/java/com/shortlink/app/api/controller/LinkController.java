@@ -30,9 +30,9 @@ public class LinkController {
         return linkService.create(request);
     }
 
-    @GetMapping("/by-topic/{topicPublicId}")
-    public List<LinkResponse> listByTopic(@PathVariable UUID topicPublicId) {
-        return linkService.listByTopic(topicPublicId);
+    @GetMapping
+    public List<LinkResponse> listMine() {
+        return linkService.listMine();
     }
 
     @DeleteMapping("/{linkPublicId}")

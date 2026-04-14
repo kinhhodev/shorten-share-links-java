@@ -1,17 +1,17 @@
 package com.shortlink.app.service;
 
-import com.shortlink.app.api.dto.request.CreateLinkRequest;
-import com.shortlink.app.api.dto.response.LinkResponse;
-import com.shortlink.app.api.mapper.LinkMapper;
+import com.shortlink.app.api.dto.request.CreateGuestLinkRequest;
+import com.shortlink.app.api.dto.response.GuestLinkCreatedResponse;
+import com.shortlink.app.config.AppProperties;
 import com.shortlink.app.domain.entity.Link;
-import com.shortlink.app.domain.entity.User;
 import com.shortlink.app.exception.ApiException;
 import com.shortlink.app.repository.LinkRepository;
 import com.shortlink.app.util.PathSegments;
 import com.shortlink.app.util.UrlValidator;
-import java.util.List;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Locale;
-import java.util.UUID;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -22,32 +22,38 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class LinkService {
+public class GuestLinkService {
 
     private static final int MAX_SLUG_LENGTH = 64;
     private static final int MAX_SLUG_ALLOCATION_ATTEMPTS = 10_000;
 
     private final LinkRepository linkRepository;
-    private final LinkMapper linkMapper;
     private final LinkRedisCache linkRedisCache;
-    private final CurrentUserService currentUserService;
+    private final AppProperties appProperties;
+    private final ShortLinkUrlComposer shortLinkUrlComposer;
 
     @Transactional
-    public LinkResponse create(CreateLinkRequest request) {
-        User user = currentUserService.requireCurrentUser();
+    public GuestLinkCreatedResponse create(CreateGuestLinkRequest request) {
         String topic;
         try {
             topic = PathSegments.normalizeTopic(request.getTopic());
         } catch (IllegalArgumentException e) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_topic", e.getMessage());
         }
-        String requestedBase = request.getSlug().trim().toLowerCase(Locale.ROOT);
+
+        String rawUrl = request.getOriginalUrl() == null ? "" : request.getOriginalUrl().trim();
+        if (rawUrl.isEmpty()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_url", "URL is required");
+        }
         String safeUrl;
         try {
-            safeUrl = UrlValidator.requireHttpUrl(request.getOriginalUrl());
+            safeUrl = UrlValidator.requireHttpUrl(rawUrl);
         } catch (IllegalArgumentException e) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_url", e.getMessage());
         }
+
+        String requestedBase = request.getSlug().trim().toLowerCase(Locale.ROOT);
+        Instant expireAt = Instant.now().plus(appProperties.getGuestPublic().getLinkTtlDays(), ChronoUnit.DAYS);
 
         int n = 0;
         while (n < MAX_SLUG_ALLOCATION_ATTEMPTS) {
@@ -62,7 +68,7 @@ public class LinkService {
             }
             if (linkRepository.existsByTopicAndSlug(topic, candidate)) {
                 log.debug(
-                        "Slug taken in topic topic={} requestedBase={} candidate={} attempt={}",
+                        "Guest slug taken topic={} requestedBase={} candidate={} attempt={}",
                         topic,
                         requestedBase,
                         candidate,
@@ -76,30 +82,29 @@ public class LinkService {
                                 .topic(topic)
                                 .slug(candidate)
                                 .originalUrl(safeUrl)
-                                .createdBy(user)
-                                .isGuest(false)
-                                .expireAt(null)
+                                .createdBy(null)
+                                .isGuest(true)
+                                .expireAt(expireAt)
                                 .clickCount(0)
                                 .build();
                 link = linkRepository.saveAndFlush(link);
-                linkRedisCache.put(topic, candidate, safeUrl);
+                linkRedisCache.put(topic, candidate, safeUrl, Optional.of(expireAt));
                 log.info(
-                        "Created link publicId={} topic={} slug={} requestedBase={} userPublicId={}",
+                        "Created guest link publicId={} topic={} slug={} requestedBase={} expires={}",
                         link.getPublicId(),
                         topic,
                         candidate,
                         requestedBase,
-                        user.getPublicId());
-                return linkMapper.toResponse(link);
+                        expireAt);
+
+                return GuestLinkCreatedResponse.builder()
+                        .shortUrl(shortLinkUrlComposer.toAbsoluteUrl(topic, candidate))
+                        .build();
             } catch (DataIntegrityViolationException ex) {
                 if (!isLinkPathUniqueConstraintViolation(ex)) {
                     throw ex;
                 }
-                log.warn(
-                        "Unique constraint race topic={} candidate={} userPublicId={} — retrying",
-                        topic,
-                        candidate,
-                        user.getPublicId());
+                log.warn("Guest unique constraint race topic={} candidate={} — retrying", topic, candidate);
                 n++;
             }
         }
@@ -109,11 +114,11 @@ public class LinkService {
                 "Could not allocate a unique slug after " + MAX_SLUG_ALLOCATION_ATTEMPTS + " attempts");
     }
 
-    private static String candidateSlug(String normalizedBase, int n) {
-        if (n == 0) {
+    private static String candidateSlug(String normalizedBase, int num) {
+        if (num == 0) {
             return normalizedBase;
         }
-        return normalizedBase + "-" + n;
+        return normalizedBase + "-" + num;
     }
 
     private static boolean isLinkPathUniqueConstraintViolation(DataIntegrityViolationException ex) {
@@ -123,28 +128,5 @@ public class LinkService {
         }
         String lower = msg.toLowerCase(Locale.ROOT);
         return lower.contains("uq_links_topic_slug");
-    }
-
-    @Transactional(readOnly = true)
-    public List<LinkResponse> listMine() {
-        User user = currentUserService.requireCurrentUser();
-        return linkRepository.findByCreatedByIdAndIsGuestIsFalseOrderByCreatedAtDesc(user.getId()).stream()
-                .map(linkMapper::toResponse)
-                .toList();
-    }
-
-    @Transactional
-    public void deleteByPublicId(UUID linkPublicId) {
-        User user = currentUserService.requireCurrentUser();
-        Link link =
-                linkRepository
-                        .findByPublicId(linkPublicId)
-                        .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "link_not_found", "Link not found"));
-        if (link.isGuest() || link.getCreatedBy() == null || !link.getCreatedBy().getId().equals(user.getId())) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "forbidden", "You cannot delete this link");
-        }
-        linkRedisCache.evict(link.getTopic(), link.getSlug());
-        linkRepository.delete(link);
-        log.info("Deleted link {}", linkPublicId);
     }
 }

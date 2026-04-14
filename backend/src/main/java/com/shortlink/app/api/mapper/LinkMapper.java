@@ -1,8 +1,8 @@
 package com.shortlink.app.api.mapper;
 
 import com.shortlink.app.api.dto.response.LinkResponse;
-import com.shortlink.app.config.AppProperties;
 import com.shortlink.app.domain.entity.Link;
+import com.shortlink.app.service.ShortLinkUrlComposer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -10,21 +10,16 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class LinkMapper {
 
-    private final AppProperties appProperties;
+    private final ShortLinkUrlComposer shortLinkUrlComposer;
 
     public LinkResponse toResponse(Link link) {
-        String base = appProperties.getPublicBaseUrl().replaceAll("/$", "");
-        String prefix = appProperties.getRedirect().getPathPrefix().startsWith("/")
-                ? appProperties.getRedirect().getPathPrefix()
-                : "/" + appProperties.getRedirect().getPathPrefix();
-        String shortUrl = base + prefix + "/" + link.getShortSlug();
+        String shortUrl = shortLinkUrlComposer.toAbsoluteUrl(link.getTopic(), link.getSlug());
         return LinkResponse.builder()
                 .publicId(link.getPublicId())
-                .shortSlug(link.getShortSlug())
+                .topic(link.getTopic())
+                .slug(link.getSlug())
                 .shortUrl(shortUrl)
                 .originalUrl(link.getOriginalUrl())
-                .topicPublicId(link.getTopic().getPublicId())
-                .topicSlug(link.getTopic().getSlug())
                 .createdAt(link.getCreatedAt())
                 .build();
     }

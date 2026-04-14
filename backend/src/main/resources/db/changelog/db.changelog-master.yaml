@@ -2,3 +2,15 @@ databaseChangeLog:
   - include:
       file: changes/001-init-schema.sql
       relativeToChangelogFile: true
+  - include:
+      file: changes/002-guest-links.sql
+      relativeToChangelogFile: true
+  - include:
+      file: changes/003-topic-segment-path.sql
+      relativeToChangelogFile: true
+  - include:
+      file: changes/004-remove-topics-rename-slug.sql
+      relativeToChangelogFile: true
+  - include:
+      file: changes/005-links-topic-column.sql
+      relativeToChangelogFile: true

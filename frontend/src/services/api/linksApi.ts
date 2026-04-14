@@ -1,8 +1,8 @@
 import { apiClient } from './client';
 import type { CreateLinkRequest, Link } from './types';
 
-export async function listByTopic(topicPublicId: string): Promise<Link[]> {
-  const { data } = await apiClient.get<Link[]>(`/api/v1/links/by-topic/${topicPublicId}`);
+export async function listMine(): Promise<Link[]> {
+  const { data } = await apiClient.get<Link[]>('/api/v1/links');
   return data;
 }
 

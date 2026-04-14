@@ -22,15 +22,22 @@ public class RedisRateLimiterService {
      * Fixed-window counter per key. Returns true if request is allowed.
      */
     public boolean allow(String bucket, String discriminator) {
-        String key = KEY_PREFIX + bucket + ":" + discriminator;
         int window = appProperties.getRateLimit().getWindowSeconds();
         int max = appProperties.getRateLimit().getRequestsPerWindow();
+        return allow(bucket, discriminator, max, window);
+    }
+
+    /**
+     * Fixed-window counter with explicit limits (e.g. guest public API).
+     */
+    public boolean allow(String bucket, String discriminator, int maxRequests, int windowSeconds) {
+        String key = KEY_PREFIX + bucket + ":" + discriminator;
         try {
             Long count = stringRedisTemplate.opsForValue().increment(key);
             if (count != null && count == 1) {
-                stringRedisTemplate.expire(key, Duration.ofSeconds(window));
+                stringRedisTemplate.expire(key, Duration.ofSeconds(windowSeconds));
             }
-            return count != null && count <= max;
+            return count != null && count <= maxRequests;
         } catch (DataAccessException e) {
             log.warn("Redis rate limiter unavailable, allowing request: {}", e.getMessage());
             return true;

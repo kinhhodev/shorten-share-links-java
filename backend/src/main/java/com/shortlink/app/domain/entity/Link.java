@@ -35,19 +35,29 @@ public class Link {
     @Column(name = "public_id", nullable = false, unique = true, updatable = false)
     private UUID publicId;
 
-    @Column(name = "short_slug", nullable = false, unique = true, length = 64)
-    private String shortSlug;
+    /**
+     * First path segment in public URL {@code /r/{topic}/{slug}}; use {@code _} when no topic label.
+     */
+    @Column(name = "topic", nullable = false, length = 100)
+    @Builder.Default
+    private String topic = "_";
+
+    @Column(name = "slug", nullable = false, length = 64)
+    private String slug;
 
     @Column(name = "original_url", nullable = false, columnDefinition = "TEXT")
     private String originalUrl;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "topic_id", nullable = false)
-    private Topic topic;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "created_by_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by_id", nullable = true)
     private User createdBy;
+
+    @Column(name = "is_guest", nullable = false)
+    @Builder.Default
+    private boolean isGuest = false;
+
+    @Column(name = "expire_at")
+    private Instant expireAt;
 
     @Column(name = "click_count", nullable = false)
     private long clickCount;
