@@ -3,15 +3,18 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { clearToken } from '@/lib/authStorage';
+import { UserMenuDropdown } from '@/components/ui/UserMenuDropdown';
+import { clearToken, getAuthUser, subscribeAuthUser } from '@/lib/authStorage';
 import { getErrorMessage, linksApi } from '@/services/api';
 
 export function DashboardPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const initialUser = getAuthUser();
   const [openTopics, setOpenTopics] = useState<Record<string, boolean>>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [showCopyNotice, setShowCopyNotice] = useState(false);
+  const [userLabel, setUserLabel] = useState(() => initialUser?.displayName ?? initialUser?.email ?? 'Account');
   const copyNoticeTimerRef = useRef<number | null>(null);
 
   const linksQuery = useQuery({
@@ -68,7 +71,13 @@ export function DashboardPage() {
   }
 
   useEffect(() => {
+    const unsubscribe = subscribeAuthUser(() => {
+      const user = getAuthUser();
+      setUserLabel(user?.displayName ?? user?.email ?? 'Account');
+    });
+
     return () => {
+      unsubscribe();
       if (copyNoticeTimerRef.current) {
         window.clearTimeout(copyNoticeTimerRef.current);
       }
@@ -90,9 +99,7 @@ export function DashboardPage() {
           <Button type="button" onClick={() => navigate('/')}>
             Create Short Link
           </Button>
-          <Button type="button" variant="ghost" onClick={logout}>
-            Log out
-          </Button>
+          <UserMenuDropdown label={userLabel} onLogout={logout} />
         </div>
       </header>
 

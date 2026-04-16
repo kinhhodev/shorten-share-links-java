@@ -4,14 +4,15 @@ import { Button } from '@/components/ui/Button';
 import { CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
+import { setAuthUser, setToken } from '@/lib/authStorage';
 import { getErrorMessage, authApi } from '@/services/api';
-import { setToken } from '@/lib/authStorage';
+import type { AuthResponse } from '@/services/api';
 
 export type AuthMode = 'login' | 'register';
 
 type AuthFormProps = {
   initialMode?: AuthMode;
-  onAuthenticated: () => void;
+  onAuthenticated: (response: AuthResponse) => void;
   onModeChange?: (mode: AuthMode) => void;
   idPrefix: string;
   showCardTitle?: boolean;
@@ -35,8 +36,13 @@ export function AuthForm({
     mutationFn: () => authApi.login({ email, password }),
     onSuccess: (data) => {
       setToken(data.accessToken);
+      setAuthUser({
+        userPublicId: data.userPublicId,
+        email: data.email,
+        displayName: data.displayName,
+      });
       queryClient.clear();
-      onAuthenticated();
+      onAuthenticated(data);
     },
     onError: (e) => setFormError(getErrorMessage(e)),
   });
@@ -50,8 +56,13 @@ export function AuthForm({
       }),
     onSuccess: (data) => {
       setToken(data.accessToken);
+      setAuthUser({
+        userPublicId: data.userPublicId,
+        email: data.email,
+        displayName: data.displayName,
+      });
       queryClient.clear();
-      onAuthenticated();
+      onAuthenticated(data);
     },
     onError: (e) => setFormError(getErrorMessage(e)),
   });

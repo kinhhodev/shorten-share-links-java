@@ -6,10 +6,7 @@ import lombok.Value;
 
 @Value
 @Builder
-public class AuthResponse {
-    String accessToken;
-    String tokenType;
-    long expiresInMs;
+public class CurrentUserResponse {
     UUID userPublicId;
     String email;
     String displayName;

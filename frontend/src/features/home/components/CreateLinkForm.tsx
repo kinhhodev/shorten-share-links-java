@@ -8,11 +8,11 @@ import { getErrorMessage, linksApi, publicLinksApi } from '@/services/api';
 const TOPIC_SEGMENT_PATTERN = /^[a-zA-Z0-9_-]{1,100}$/;
 const SLUG_PATTERN = /^[a-zA-Z0-9_-]+$/;
 
-type GuestCreateLinkFormProps = {
+type CreateLinkFormProps = {
   authenticated?: boolean;
 };
 
-export function GuestCreateLinkForm({ authenticated = false }: GuestCreateLinkFormProps) {
+export function CreateLinkForm({ authenticated = false }: CreateLinkFormProps) {
   const queryClient = useQueryClient();
   const [topic, setTopic] = useState('');
   const [slug, setSlug] = useState('');
@@ -37,7 +37,6 @@ export function GuestCreateLinkForm({ authenticated = false }: GuestCreateLinkFo
     onSuccess: (data) => {
       setCreatedUrl(data.shortUrl);
       setError(null);
-      // Clear inputs after successful create
       setTopic('');
       setSlug('');
       setOriginalUrl('');
@@ -133,8 +132,8 @@ export function GuestCreateLinkForm({ authenticated = false }: GuestCreateLinkFo
             autoComplete="off"
           />
           <p className="mt-1 text-xs font-semibold text-neutral-600">
-            Chủ đề — phần đầu trong URL <span className="font-mono">/r/&lt;topic&gt;/&lt;slug&gt;</span>. Để trống
-            dùng mặc định <span className="font-mono">_</span>.
+            Chu de - phan dau trong URL <span className="font-mono">/r/&lt;topic&gt;/&lt;slug&gt;</span>. De trong dung
+            mac dinh <span className="font-mono">_</span>.
           </p>
         </div>
         <div className="w-full">
@@ -150,8 +149,8 @@ export function GuestCreateLinkForm({ authenticated = false }: GuestCreateLinkFo
             autoComplete="off"
           />
           <p className="mt-1 text-xs font-semibold text-neutral-600">
-            Tên gợi nhớ (3–60 ký tự). Nếu trùng trong cùng topic, hệ thống có thể gán{' '}
-            <span className="font-mono">name-1</span>, <span className="font-mono">name-2</span>, …
+            Ten goi nho (3-60 ky tu). Neu trung trong cung topic, he thong co the gan{' '}
+            <span className="font-mono">name-1</span>, <span className="font-mono">name-2</span>, ...
           </p>
         </div>
         <div className="w-full">
@@ -195,7 +194,7 @@ export function GuestCreateLinkForm({ authenticated = false }: GuestCreateLinkFo
           )}
         </div>
       )}
-      
+
       {!authenticated && (
         <p className="text-sm font-semibold text-neutral-700">
           Guest links expire after a limited time. Log in to manage topics and long-lived links on your dashboard.

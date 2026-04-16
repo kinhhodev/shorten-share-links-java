@@ -3,7 +3,8 @@ import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-route
 import { AppProviders } from '@/app/providers';
 import { DashboardPage } from '@/features/dashboard/pages/DashboardPage';
 import { HomePage } from '@/features/home/pages/HomePage';
-import { getToken } from '@/lib/authStorage';
+import { clearToken, getAuthUser, getToken, setAuthUser } from '@/lib/authStorage';
+import { authApi } from '@/services/api';
 
 function AuthLostListener() {
   const navigate = useNavigate();
@@ -12,6 +13,26 @@ function AuthLostListener() {
     window.addEventListener('shortlink:auth-lost', fn);
     return () => window.removeEventListener('shortlink:auth-lost', fn);
   }, [navigate]);
+  return null;
+}
+
+function AuthBootstrap() {
+  useEffect(() => {
+    if (!getToken() || getAuthUser()) {
+      return;
+    }
+
+    void authApi
+      .getCurrentUser()
+      .then((user) => {
+        setAuthUser(user);
+      })
+      .catch(() => {
+        clearToken();
+        window.dispatchEvent(new CustomEvent('shortlink:auth-lost'));
+      });
+  }, []);
+
   return null;
 }
 
@@ -27,6 +48,7 @@ export default function App() {
     <AppProviders>
       <BrowserRouter>
         <AuthLostListener />
+        <AuthBootstrap />
         <Routes>
           <Route
             path="/dashboard"

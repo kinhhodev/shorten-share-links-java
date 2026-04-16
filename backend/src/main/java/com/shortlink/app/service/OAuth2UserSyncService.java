@@ -31,10 +31,15 @@ public class OAuth2UserSyncService {
         }
         email = email.trim().toLowerCase(Locale.ROOT);
         String name = attrs.get("name") instanceof String s ? s : null;
+        String fallbackDisplayName = (name != null && !name.isBlank()) ? name.trim() : email;
 
         Optional<User> byProvider = userRepository.findByAuthProviderAndProviderSubject(AuthProvider.GOOGLE, subject);
         if (byProvider.isPresent()) {
-            return byProvider.get();
+            User existing = byProvider.get();
+            if (existing.getDisplayName() == null || existing.getDisplayName().isBlank()) {
+                existing.setDisplayName(fallbackDisplayName);
+            }
+            return userRepository.save(existing);
         }
 
         Optional<User> byEmail = userRepository.findByEmailIgnoreCase(email);
@@ -42,6 +47,9 @@ public class OAuth2UserSyncService {
             User existing = byEmail.get();
             existing.setAuthProvider(AuthProvider.GOOGLE);
             existing.setProviderSubject(subject);
+            if (existing.getDisplayName() == null || existing.getDisplayName().isBlank()) {
+                existing.setDisplayName(fallbackDisplayName);
+            }
             User saved = userRepository.save(existing);
             log.info("Linked Google account to existing user {}", saved.getPublicId());
             return saved;
@@ -50,7 +58,7 @@ public class OAuth2UserSyncService {
         User created =
                 User.builder()
                         .email(email)
-                        .displayName(name)
+                        .displayName(fallbackDisplayName)
                         .authProvider(AuthProvider.GOOGLE)
                         .providerSubject(subject)
                         .enabled(true)

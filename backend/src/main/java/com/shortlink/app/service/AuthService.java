@@ -68,12 +68,14 @@ public class AuthService {
 
     private AuthResponse buildTokenResponse(User user) {
         String token = jwtService.generateToken(user.getId(), user.getEmail());
+        String displayName = user.getDisplayName() != null && !user.getDisplayName().isBlank() ? user.getDisplayName() : user.getEmail();
         return AuthResponse.builder()
                 .accessToken(token)
                 .tokenType("Bearer")
                 .expiresInMs(appProperties.getJwt().getExpirationMs())
                 .userPublicId(user.getPublicId())
                 .email(user.getEmail())
+                .displayName(displayName)
                 .build();
     }
 }

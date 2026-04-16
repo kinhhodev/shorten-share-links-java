@@ -1,14 +1,15 @@
 import clsx from 'clsx';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/Button';
 import { Card, CardTitle } from '@/components/ui/Card';
 import { Modal } from '@/components/ui/Modal';
+import { UserMenuDropdown } from '@/components/ui/UserMenuDropdown';
 import { AuthForm } from '@/features/auth/components/AuthForm';
 import type { AuthMode } from '@/features/auth/components/AuthForm';
-import { clearToken, getToken } from '@/lib/authStorage';
-import { GuestCreateLinkForm } from '../components/GuestCreateLinkForm';
+import { clearToken, getAuthUser, getToken, subscribeAuthUser } from '@/lib/authStorage';
+import { CreateLinkForm } from '../components/CreateLinkForm';
 
 const linkBtn =
   'inline-flex flex-1 items-center justify-center border-4 border-black px-4 py-2 text-center font-bold uppercase tracking-wide shadow-brutal-sm transition-transform hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[2px_2px_0_0_#000] active:translate-x-1 active:translate-y-1 active:shadow-none';
@@ -16,14 +17,25 @@ const linkBtn =
 export function HomePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const initialUser = getAuthUser();
   const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(getToken()));
+  const [userLabel, setUserLabel] = useState(() => initialUser?.displayName ?? initialUser?.email ?? 'Account');
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>('login');
+
+  useEffect(() => {
+    return subscribeAuthUser(() => {
+      const user = getAuthUser();
+      setUserLabel(user?.displayName ?? user?.email ?? 'Account');
+      setIsAuthenticated(Boolean(getToken()));
+    });
+  }, []);
 
   function logout() {
     clearToken();
     void queryClient.clear();
     setIsAuthenticated(false);
+    setUserLabel('Account');
     navigate('/', { replace: true });
   }
 
@@ -45,19 +57,17 @@ export function HomePage() {
                 <Button type="button" variant="primary" onClick={() => navigate('/dashboard')}>
                   Dashboard
                 </Button>
-                <Button type="button" variant="ghost" onClick={logout}>
-                  Logout
-                </Button>
+                <UserMenuDropdown label={userLabel} onLogout={logout} />
               </div>
             </div>
-            <GuestCreateLinkForm authenticated />
+            <CreateLinkForm authenticated />
           </Card>
         </div>
       ) : (
         <div className="mx-auto w-full max-w-4xl space-y-10">
           <Card className="w-full">
             <CardTitle className="mb-4">New short link</CardTitle>
-            <GuestCreateLinkForm />
+            <CreateLinkForm />
           </Card>
           <div className="flex w-full flex-col gap-4">
             <button
@@ -123,9 +133,10 @@ export function HomePage() {
             initialMode="login"
             onModeChange={setAuthMode}
             showCardTitle={false}
-            onAuthenticated={() => {
+            onAuthenticated={(response) => {
               setShowLoginModal(false);
               setIsAuthenticated(true);
+              setUserLabel(response.displayName || response.email || 'Account');
             }}
           />
         </Modal>

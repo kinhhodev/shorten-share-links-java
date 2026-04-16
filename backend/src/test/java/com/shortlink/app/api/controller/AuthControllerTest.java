@@ -2,6 +2,8 @@ package com.shortlink.app.api.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -10,9 +12,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shortlink.app.api.dto.request.LoginRequest;
 import com.shortlink.app.api.dto.request.RegisterRequest;
 import com.shortlink.app.api.dto.response.AuthResponse;
+import com.shortlink.app.domain.entity.AuthProvider;
+import com.shortlink.app.domain.entity.User;
 import com.shortlink.app.security.JwtAuthenticationFilter;
 import com.shortlink.app.security.RateLimitFilter;
 import com.shortlink.app.service.AuthService;
+import com.shortlink.app.service.CurrentUserService;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +41,9 @@ class AuthControllerTest {
     private AuthService authService;
 
     @MockBean
+    private CurrentUserService currentUserService;
+
+    @MockBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @MockBean
@@ -50,6 +58,7 @@ class AuthControllerTest {
                         .expiresInMs(3600_000)
                         .userPublicId(UUID.randomUUID())
                         .email("user@example.com")
+                        .displayName("Neo User")
                         .build();
         when(authService.login(any(LoginRequest.class))).thenReturn(res);
 
@@ -63,7 +72,8 @@ class AuthControllerTest {
                                 .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").value("jwt-token"))
-                .andExpect(jsonPath("$.tokenType").value("Bearer"));
+                .andExpect(jsonPath("$.tokenType").value("Bearer"))
+                .andExpect(jsonPath("$.displayName").value("Neo User"));
     }
 
     @Test
@@ -75,6 +85,7 @@ class AuthControllerTest {
                         .expiresInMs(3600_000)
                         .userPublicId(UUID.randomUUID())
                         .email("new@example.com")
+                        .displayName("Neo")
                         .build();
         when(authService.register(any(RegisterRequest.class))).thenReturn(res);
 
@@ -88,12 +99,32 @@ class AuthControllerTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.accessToken").value("jwt-new"));
+                .andExpect(jsonPath("$.accessToken").value("jwt-new"))
+                .andExpect(jsonPath("$.displayName").value("Neo"));
     }
 
     @Test
     void loginValidatesBody() throws Exception {
         mockMvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void meReturnsCurrentUserProfile() throws Exception {
+        UUID publicId = UUID.randomUUID();
+        User currentUser = User.builder()
+                .publicId(publicId)
+                .email("me@example.com")
+                .displayName("My Name")
+                .authProvider(AuthProvider.LOCAL)
+                .enabled(true)
+                .build();
+        when(currentUserService.requireCurrentUser()).thenReturn(currentUser);
+
+        mockMvc.perform(get("/api/v1/auth/me").with(user("me@example.com")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userPublicId").value(publicId.toString()))
+                .andExpect(jsonPath("$.email").value("me@example.com"))
+                .andExpect(jsonPath("$.displayName").value("My Name"));
     }
 }

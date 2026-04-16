@@ -6,6 +6,13 @@ export interface AuthResponse {
   expiresInMs: number;
   userPublicId: string;
   email: string;
+  displayName: string;
+}
+
+export interface CurrentUserResponse {
+  userPublicId: string;
+  email: string;
+  displayName: string;
 }
 
 export interface LoginRequest {
