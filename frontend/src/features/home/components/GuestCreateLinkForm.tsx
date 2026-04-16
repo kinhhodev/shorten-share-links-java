@@ -1,30 +1,49 @@
-import { useMutation } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
-import { getErrorMessage, publicLinksApi } from '@/services/api';
+import { getErrorMessage, linksApi, publicLinksApi } from '@/services/api';
 
 const TOPIC_SEGMENT_PATTERN = /^[a-zA-Z0-9_-]{1,100}$/;
 const SLUG_PATTERN = /^[a-zA-Z0-9_-]+$/;
 
-export function GuestCreateLinkForm() {
+type GuestCreateLinkFormProps = {
+  authenticated?: boolean;
+};
+
+export function GuestCreateLinkForm({ authenticated = false }: GuestCreateLinkFormProps) {
+  const queryClient = useQueryClient();
   const [topic, setTopic] = useState('');
   const [slug, setSlug] = useState('');
   const [originalUrl, setOriginalUrl] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [createdUrl, setCreatedUrl] = useState<string | null>(null);
+  const [showCopyNotice, setShowCopyNotice] = useState(false);
+  const copyNoticeTimerRef = useRef<number | null>(null);
 
   const mutation = useMutation({
-    mutationFn: () =>
-      publicLinksApi.createGuestLink({
+    mutationFn: async () => {
+      const body = {
         originalUrl,
         slug: slug.trim(),
         ...(topic.trim() ? { topic: topic.trim() } : {}),
-      }),
+      };
+      if (authenticated) {
+        return linksApi.createLink(body);
+      }
+      return publicLinksApi.createGuestLink(body);
+    },
     onSuccess: (data) => {
       setCreatedUrl(data.shortUrl);
       setError(null);
+      // Clear inputs after successful create
+      setTopic('');
+      setSlug('');
+      setOriginalUrl('');
+      if (authenticated) {
+        void queryClient.invalidateQueries({ queryKey: ['links', 'mine'] });
+      }
     },
     onError: (e) => {
       setError(getErrorMessage(e));
@@ -42,11 +61,11 @@ export function GuestCreateLinkForm() {
     }
     const s = slug.trim();
     if (!s) {
-      setError('Short slug is required.');
+      setError('Slug is required.');
       return false;
     }
     if (s.length < 3 || s.length > 60) {
-      setError('Short slug must be between 3 and 60 characters.');
+      setError('Slug must be between 3 and 60 characters.');
       return false;
     }
     if (!SLUG_PATTERN.test(s)) {
@@ -66,8 +85,33 @@ export function GuestCreateLinkForm() {
     return true;
   }
 
+  async function copyShortLink(url: string) {
+    await navigator.clipboard.writeText(url);
+    setShowCopyNotice(true);
+    if (copyNoticeTimerRef.current) {
+      window.clearTimeout(copyNoticeTimerRef.current);
+    }
+    copyNoticeTimerRef.current = window.setTimeout(() => {
+      setShowCopyNotice(false);
+      copyNoticeTimerRef.current = null;
+    }, 2200);
+  }
+
+  useEffect(() => {
+    return () => {
+      if (copyNoticeTimerRef.current) {
+        window.clearTimeout(copyNoticeTimerRef.current);
+      }
+    };
+  }, []);
+
   return (
     <div className="space-y-4">
+      {showCopyNotice && (
+        <div className="fixed right-4 top-4 z-50 border-4 border-black bg-[#d1fae5] px-4 py-3 text-sm font-bold uppercase shadow-brutal-sm">
+          Your Link is copied
+        </div>
+      )}
       <form
         className="flex w-full flex-col gap-3"
         onSubmit={(e) => {
@@ -94,7 +138,7 @@ export function GuestCreateLinkForm() {
           </p>
         </div>
         <div className="w-full">
-          <Label htmlFor="guest-short-slug">Short slug</Label>
+          <Label htmlFor="guest-short-slug">Slug</Label>
           <Input
             id="guest-short-slug"
             required
@@ -139,16 +183,24 @@ export function GuestCreateLinkForm() {
             type="button"
             variant="secondary"
             className="mt-3"
-            onClick={() => void navigator.clipboard.writeText(createdUrl)}
+            onClick={() => void copyShortLink(createdUrl)}
           >
             Copy link
           </Button>
+
+          {!authenticated && createdUrl && (
+            <p className="mt-3 text-sm font-semibold text-red-700">
+              Note: Your link will expire tomorrow.
+            </p>
+          )}
         </div>
       )}
-
-      <p className="text-sm font-semibold text-neutral-700">
-        Guest links expire after a limited time. Log in to manage topics and long-lived links on your dashboard.
-      </p>
+      
+      {!authenticated && (
+        <p className="text-sm font-semibold text-neutral-700">
+          Guest links expire after a limited time. Log in to manage topics and long-lived links on your dashboard.
+        </p>
+      )}
     </div>
   );
 }

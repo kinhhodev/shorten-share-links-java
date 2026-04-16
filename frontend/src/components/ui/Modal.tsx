@@ -41,7 +41,12 @@ export function Modal({ open, title, onClose, children, className }: ModalProps)
           className
         )}
       >
-        <div className={clsx('flex items-start justify-between gap-4', title ? 'mb-4' : 'mb-0 justify-end')}>
+        <div
+          className={clsx(
+            'flex items-start gap-4',
+            title ? 'mb-4 justify-between' : 'mb-4 justify-end'
+          )}
+        >
           {title ? (
             <h2 id="modal-title" className="font-display text-xl uppercase">
               {title}

@@ -12,6 +12,7 @@ export type AuthMode = 'login' | 'register';
 type AuthFormProps = {
   initialMode?: AuthMode;
   onAuthenticated: () => void;
+  onModeChange?: (mode: AuthMode) => void;
   idPrefix: string;
   showCardTitle?: boolean;
 };
@@ -19,6 +20,7 @@ type AuthFormProps = {
 export function AuthForm({
   initialMode = 'login',
   onAuthenticated,
+  onModeChange,
   idPrefix,
   showCardTitle = true,
 }: AuthFormProps) {
@@ -78,6 +80,7 @@ export function AuthForm({
           }`}
           onClick={() => {
             setMode('login');
+            onModeChange?.('login');
             setFormError(null);
           }}
         >
@@ -86,10 +89,11 @@ export function AuthForm({
         <button
           type="button"
           className={`flex-1 border-4 border-black py-2 text-sm font-black uppercase ${
-            mode === 'register' ? 'bg-[#7dd3fc] shadow-brutal-sm' : 'bg-white'
+            mode === 'register' ? 'bg-[#FFE156] shadow-brutal-sm' : 'bg-white'
           }`}
           onClick={() => {
             setMode('register');
+            onModeChange?.('register');
             setFormError(null);
           }}
         >
@@ -98,7 +102,7 @@ export function AuthForm({
       </div>
 
       {showCardTitle && (
-        <CardTitle className="mb-4">{mode === 'login' ? 'Welcome back' : 'Create account'}</CardTitle>
+        <CardTitle className="mb-4">{mode === 'login' ? 'Login' : 'Create account'}</CardTitle>
       )}
 
       <form onSubmit={onSubmit} className="space-y-4">

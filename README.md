@@ -104,3 +104,13 @@ docker compose down
 ```
 
 To enable optional Google OAuth2, add profile **`oauth2`** and credentials (see `backend/src/main/resources/application-oauth2.yml`).
+
+## Slug Allocation Rules
+
+- Public redirect URL format stays **`/r/{topic}/{slug}`**.
+- Slug uniqueness is global per topic (database unique index: **`(topic, slug)`**), regardless of `created_by_id`.
+- When a requested slug is already taken in the same topic, the system auto-allocates the next available suffix:
+  - `name` -> `name-1` -> `name-2` -> ...
+- This behavior is applied consistently for both:
+  - authenticated user links (`created_by_id` is set)
+  - guest links (`created_by_id` is null)
