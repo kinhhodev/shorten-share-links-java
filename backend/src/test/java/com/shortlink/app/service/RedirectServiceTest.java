@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.shortlink.app.domain.entity.Link;
+import com.shortlink.app.domain.entity.LinkStatus;
 import com.shortlink.app.event.LinkClickedEvent;
 import com.shortlink.app.exception.ApiException;
 import com.shortlink.app.repository.LinkRepository;
@@ -53,7 +54,7 @@ class RedirectServiceTest {
                         .build();
 
         when(linkRedisCache.getTargetUrl("t", "s")).thenReturn(Optional.of("https://cached.example"));
-        when(linkRepository.findByTopicAndSlug("t", "s")).thenReturn(Optional.of(link));
+        when(linkRepository.findByTopicAndSlugAndStatus("t", "s", LinkStatus.ACTIVE)).thenReturn(Optional.of(link));
 
         String url = redirectService.resolveAndRecordClick("T", "S");
 
@@ -77,7 +78,7 @@ class RedirectServiceTest {
                         .build();
 
         when(linkRedisCache.getTargetUrl("t", "s")).thenReturn(Optional.empty());
-        when(linkRepository.findByTopicAndSlug("t", "s")).thenReturn(Optional.of(link));
+        when(linkRepository.findByTopicAndSlugAndStatus("t", "s", LinkStatus.ACTIVE)).thenReturn(Optional.of(link));
 
         String url = redirectService.resolveAndRecordClick("t", "s");
 
@@ -91,7 +92,7 @@ class RedirectServiceTest {
     @Test
     void throwsNotFoundWhenMissing() {
         when(linkRedisCache.getTargetUrl("x", "y")).thenReturn(Optional.empty());
-        when(linkRepository.findByTopicAndSlug("x", "y")).thenReturn(Optional.empty());
+        when(linkRepository.findByTopicAndSlugAndStatus("x", "y", LinkStatus.ACTIVE)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> redirectService.resolveAndRecordClick("x", "y"))
                 .isInstanceOf(ApiException.class)
@@ -114,7 +115,7 @@ class RedirectServiceTest {
                         .build();
 
         when(linkRedisCache.getTargetUrl("t", "e")).thenReturn(Optional.empty());
-        when(linkRepository.findByTopicAndSlug("t", "e")).thenReturn(Optional.of(expired));
+        when(linkRepository.findByTopicAndSlugAndStatus("t", "e", LinkStatus.ACTIVE)).thenReturn(Optional.of(expired));
 
         assertThatThrownBy(() -> redirectService.resolveAndRecordClick("t", "e"))
                 .isInstanceOf(ApiException.class)

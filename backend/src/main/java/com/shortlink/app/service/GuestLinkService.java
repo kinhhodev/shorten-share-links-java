@@ -4,6 +4,7 @@ import com.shortlink.app.api.dto.request.CreateGuestLinkRequest;
 import com.shortlink.app.api.dto.response.GuestLinkCreatedResponse;
 import com.shortlink.app.config.AppProperties;
 import com.shortlink.app.domain.entity.Link;
+import com.shortlink.app.domain.entity.LinkStatus;
 import com.shortlink.app.exception.ApiException;
 import com.shortlink.app.repository.LinkRepository;
 import com.shortlink.app.util.PathSegments;
@@ -66,7 +67,7 @@ public class GuestLinkService {
                                 + MAX_SLUG_LENGTH
                                 + " characters; use a shorter base slug.");
             }
-            if (linkRepository.existsByTopicAndSlug(topic, candidate)) {
+            if (linkRepository.existsByTopicAndSlugAndStatus(topic, candidate, LinkStatus.ACTIVE)) {
                 log.debug(
                         "Guest slug taken topic={} requestedBase={} candidate={} attempt={}",
                         topic,
@@ -86,6 +87,7 @@ public class GuestLinkService {
                                 .isGuest(true)
                                 .expireAt(expireAt)
                                 .clickCount(0)
+                                .status(LinkStatus.ACTIVE)
                                 .build();
                 link = linkRepository.saveAndFlush(link);
                 linkRedisCache.put(topic, candidate, safeUrl, Optional.of(expireAt));

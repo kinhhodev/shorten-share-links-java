@@ -1,6 +1,7 @@
 package com.shortlink.app.repository;
 
 import com.shortlink.app.domain.entity.Link;
+import com.shortlink.app.domain.entity.LinkStatus;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -13,17 +14,27 @@ import org.springframework.data.repository.query.Param;
 
 public interface LinkRepository extends JpaRepository<Link, UUID> {
 
-    Optional<Link> findByTopicAndSlug(String topic, String slug);
+    Optional<Link> findByTopicAndSlugAndStatus(String topic, String slug, LinkStatus status);
 
-    boolean existsByTopicAndSlug(String topic, String slug);
+    boolean existsByTopicAndSlugAndStatus(String topic, String slug, LinkStatus status);
 
-    Optional<Link> findByPublicId(UUID publicId);
+    Optional<Link> findByPublicIdAndStatus(UUID publicId, LinkStatus status);
 
     @EntityGraph(attributePaths = {"createdBy"})
-    List<Link> findByCreatedByIdAndIsGuestIsFalseOrderByCreatedAtDesc(UUID createdById);
+    List<Link> findByCreatedByIdAndIsGuestIsFalseAndStatusOrderByCreatedAtDesc(UUID createdById, LinkStatus status);
 
-    @Query("SELECT l FROM Link l WHERE l.isGuest = true AND l.expireAt < :cutoff")
+    List<Link> findByCreatedByIdAndTopicAndStatus(UUID createdById, String topic, LinkStatus status);
+
+    @Query("SELECT l FROM Link l WHERE l.isGuest = true AND l.status = 'ACTIVE' AND l.expireAt < :cutoff")
     List<Link> findGuestLinksExpiredBefore(@Param("cutoff") Instant cutoff);
+
+    @Modifying
+    @Query("UPDATE Link l SET l.status = :toStatus WHERE l.createdBy.id = :ownerId AND l.topic = :topic AND l.status = :fromStatus")
+    int updateStatusByOwnerIdAndTopic(
+            @Param("ownerId") UUID ownerId,
+            @Param("topic") String topic,
+            @Param("fromStatus") LinkStatus fromStatus,
+            @Param("toStatus") LinkStatus toStatus);
 
     @Modifying
     @Query("UPDATE Link l SET l.clickCount = l.clickCount + 1 WHERE l.id = :id")

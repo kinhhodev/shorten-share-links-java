@@ -1,6 +1,7 @@
 package com.shortlink.app.service;
 
 import com.shortlink.app.domain.entity.Link;
+import com.shortlink.app.domain.entity.LinkStatus;
 import com.shortlink.app.event.LinkClickedEvent;
 import com.shortlink.app.exception.ApiException;
 import com.shortlink.app.repository.LinkRepository;
@@ -41,7 +42,7 @@ public class RedirectService {
     private String loadFromDatabase(String topicKey, String linkSlugKey) {
         Link link =
                 linkRepository
-                        .findByTopicAndSlug(topicKey, linkSlugKey)
+                        .findByTopicAndSlugAndStatus(topicKey, linkSlugKey, LinkStatus.ACTIVE)
                         .orElseThrow(
                                 () -> new ApiException(HttpStatus.NOT_FOUND, "link_not_found", "Short link not found"));
         if (link.getExpireAt() != null && link.getExpireAt().isBefore(Instant.now())) {
@@ -54,7 +55,7 @@ public class RedirectService {
 
     private void publishClickEvent(String topicKey, String linkSlugKey) {
         linkRepository
-                .findByTopicAndSlug(topicKey, linkSlugKey)
+                .findByTopicAndSlugAndStatus(topicKey, linkSlugKey, LinkStatus.ACTIVE)
                 .ifPresent(
                         link -> {
                             if (link.getExpireAt() != null && link.getExpireAt().isBefore(Instant.now())) {

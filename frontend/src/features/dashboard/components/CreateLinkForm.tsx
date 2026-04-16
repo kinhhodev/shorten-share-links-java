@@ -77,7 +77,7 @@ export function CreateLinkForm() {
           required
           value={originalUrl}
           onChange={(e) => setOriginalUrl(e.target.value)}
-          placeholder="https://example.com/page"
+          placeholder="https://example.com/"
         />
       </div>
       {error && (

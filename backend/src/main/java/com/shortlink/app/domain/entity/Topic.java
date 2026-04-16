@@ -22,13 +22,13 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "links")
+@Table(name = "topics")
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Link {
+public class Topic {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -37,37 +37,17 @@ public class Link {
     @Column(name = "public_id", nullable = false, unique = true, updatable = false)
     private UUID publicId;
 
-    /**
-     * First path segment in public URL {@code /r/{topic}/{slug}}; use {@code _} when no topic label.
-     */
-    @Column(name = "topic", nullable = false, length = 100)
-    @Builder.Default
-    private String topic = "_";
-
-    @Column(name = "slug", nullable = false, length = 64)
-    private String slug;
-
-    @Column(name = "original_url", nullable = false, columnDefinition = "TEXT")
-    private String originalUrl;
-
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = true)
-    private User createdBy;
+    @JoinColumn(name = "owner_id", nullable = false)
+    private User owner;
 
-    @Column(name = "is_guest", nullable = false)
-    @Builder.Default
-    private boolean isGuest = false;
-
-    @Column(name = "expire_at")
-    private Instant expireAt;
-
-    @Column(name = "click_count", nullable = false)
-    private long clickCount;
+    @Column(name = "name", nullable = false, length = 100)
+    private String name;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 16)
     @Builder.Default
-    private LinkStatus status = LinkStatus.ACTIVE;
+    private TopicStatus status = TopicStatus.ACTIVE;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

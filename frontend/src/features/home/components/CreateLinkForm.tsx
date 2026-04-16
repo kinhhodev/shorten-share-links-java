@@ -145,7 +145,7 @@ export function CreateLinkForm({ authenticated = false }: CreateLinkFormProps) {
             maxLength={60}
             value={slug}
             onChange={(e) => setSlug(e.target.value)}
-            placeholder="thanh-ngu"
+            placeholder="slug"
             autoComplete="off"
           />
           <p className="mt-1 text-xs font-semibold text-neutral-600">
@@ -161,7 +161,7 @@ export function CreateLinkForm({ authenticated = false }: CreateLinkFormProps) {
             required
             value={originalUrl}
             onChange={(e) => setOriginalUrl(e.target.value)}
-            placeholder="https://example.com/page"
+            placeholder="https://example.com/"
           />
         </div>
         {error && (

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { UserMenuDropdown } from '@/components/ui/UserMenuDropdown';
 import { clearToken, getAuthUser, subscribeAuthUser } from '@/lib/authStorage';
-import { getErrorMessage, linksApi } from '@/services/api';
+import { getErrorMessage, linksApi, topicsApi } from '@/services/api';
 
 export function DashboardPage() {
   const navigate = useNavigate();
@@ -48,6 +48,13 @@ export function DashboardPage() {
     },
   });
 
+  const deleteTopic = useMutation({
+    mutationFn: (topicName: string) => topicsApi.deleteTopic(topicName),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['links', 'mine'] });
+    },
+  });
+
   function logout() {
     clearToken();
     void queryClient.clear();
@@ -56,6 +63,16 @@ export function DashboardPage() {
 
   function toggleTopic(topic: string) {
     setOpenTopics((prev) => ({ ...prev, [topic]: !prev[topic] }));
+  }
+
+  function onDeleteTopic(topic: string) {
+    const accepted = window.confirm(
+      `Delete topic "${topic}"? All links in this topic will be soft-deleted and can be restored later.`
+    );
+    if (!accepted) {
+      return;
+    }
+    deleteTopic.mutate(topic);
   }
 
   async function copyShortLink(shortUrl: string) {
@@ -143,14 +160,28 @@ export function DashboardPage() {
             <div className="space-y-4">
               {groupedLinks.map((group) => (
                 <Card key={group.topic}>
-                  <button
-                    type="button"
-                    className="flex w-full items-center justify-between border-4 border-black bg-white px-4 py-3 text-left font-display text-xl uppercase"
-                    onClick={() => toggleTopic(group.topic)}
-                  >
-                    <span>{group.topic}</span>
-                    <span className="text-base">{openTopics[group.topic] ? '▲' : '▼'}</span>
-                  </button>
+                  <div className="flex w-full items-center justify-between border-4 border-black bg-white px-4 py-3 text-left font-display text-xl uppercase">
+                    <button type="button" className="text-left" onClick={() => toggleTopic(group.topic)}>
+                      {group.topic}
+                    </button>
+                    <span className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        className="inline-flex h-8 w-8 items-center justify-center border-4 border-black bg-[#fda4af] text-black hover:bg-[#fecdd3] disabled:opacity-60"
+                        onClick={() => onDeleteTopic(group.topic)}
+                        disabled={deleteTopic.isPending}
+                        aria-label={`Delete topic ${group.topic}`}
+                        title="Delete topic"
+                      >
+                        <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden="true">
+                          <path d="M9 3h6l1 2h5v2H3V5h5l1-2Zm-2 6h10v10a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V9Zm3 2v8h2v-8h-2Zm4 0v8h2v-8h-2Z" />
+                        </svg>
+                      </button>
+                      <button type="button" className="text-base" onClick={() => toggleTopic(group.topic)} aria-label="Toggle topic">
+                        {openTopics[group.topic] ? '▲' : '▼'}
+                      </button>
+                    </span>
+                  </div>
 
                   {(searchTerm.trim() ? true : openTopics[group.topic]) && (
                     <div className="mt-4 space-y-3">

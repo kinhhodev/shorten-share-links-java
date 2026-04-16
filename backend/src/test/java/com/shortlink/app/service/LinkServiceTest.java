@@ -10,6 +10,7 @@ import com.shortlink.app.api.dto.request.CreateLinkRequest;
 import com.shortlink.app.api.dto.response.LinkResponse;
 import com.shortlink.app.api.mapper.LinkMapper;
 import com.shortlink.app.domain.entity.Link;
+import com.shortlink.app.domain.entity.LinkStatus;
 import com.shortlink.app.domain.entity.User;
 import com.shortlink.app.repository.LinkRepository;
 import java.util.UUID;
@@ -34,11 +35,14 @@ class LinkServiceTest {
     @Mock
     private CurrentUserService currentUserService;
 
+    @Mock
+    private TopicService topicService;
+
     private LinkService linkService;
 
     @BeforeEach
     void setUp() {
-        linkService = new LinkService(linkRepository, linkMapper, linkRedisCache, currentUserService);
+        linkService = new LinkService(linkRepository, linkMapper, linkRedisCache, currentUserService, topicService);
         when(linkMapper.toResponse(any(Link.class)))
                 .thenAnswer(
                         inv -> {
@@ -65,8 +69,9 @@ class LinkServiceTest {
         req.setSlug("thanh-ngu");
         req.setOriginalUrl("https://google.com");
 
-        when(linkRepository.existsByTopicAndSlug("toeic", "thanh-ngu")).thenReturn(true);
-        when(linkRepository.existsByTopicAndSlug("toeic", "thanh-ngu-1")).thenReturn(false);
+        when(linkRepository.existsByTopicAndSlugAndStatus("toeic", "thanh-ngu", LinkStatus.ACTIVE)).thenReturn(true);
+        when(linkRepository.existsByTopicAndSlugAndStatus("toeic", "thanh-ngu-1", LinkStatus.ACTIVE))
+                .thenReturn(false);
         when(linkRepository.saveAndFlush(any(Link.class)))
                 .thenAnswer(
                         inv -> {

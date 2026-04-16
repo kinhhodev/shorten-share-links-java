@@ -4,6 +4,7 @@ import com.shortlink.app.api.dto.request.CreateLinkRequest;
 import com.shortlink.app.api.dto.response.LinkResponse;
 import com.shortlink.app.api.mapper.LinkMapper;
 import com.shortlink.app.domain.entity.Link;
+import com.shortlink.app.domain.entity.LinkStatus;
 import com.shortlink.app.domain.entity.User;
 import com.shortlink.app.exception.ApiException;
 import com.shortlink.app.repository.LinkRepository;
@@ -31,6 +32,7 @@ public class LinkService {
     private final LinkMapper linkMapper;
     private final LinkRedisCache linkRedisCache;
     private final CurrentUserService currentUserService;
+    private final TopicService topicService;
 
     @Transactional
     public LinkResponse create(CreateLinkRequest request) {
@@ -60,7 +62,7 @@ public class LinkService {
                                 + MAX_SLUG_LENGTH
                                 + " characters; use a shorter base slug.");
             }
-            if (linkRepository.existsByTopicAndSlug(topic, candidate)) {
+            if (linkRepository.existsByTopicAndSlugAndStatus(topic, candidate, LinkStatus.ACTIVE)) {
                 log.debug(
                         "Slug taken in topic topic={} requestedBase={} candidate={} attempt={}",
                         topic,
@@ -80,7 +82,9 @@ public class LinkService {
                                 .isGuest(false)
                                 .expireAt(null)
                                 .clickCount(0)
+                                .status(LinkStatus.ACTIVE)
                                 .build();
+                topicService.ensureTopicActive(user, topic);
                 link = linkRepository.saveAndFlush(link);
                 linkRedisCache.put(topic, candidate, safeUrl);
                 log.info(
@@ -128,7 +132,7 @@ public class LinkService {
     @Transactional(readOnly = true)
     public List<LinkResponse> listMine() {
         User user = currentUserService.requireCurrentUser();
-        return linkRepository.findByCreatedByIdAndIsGuestIsFalseOrderByCreatedAtDesc(user.getId()).stream()
+        return linkRepository.findByCreatedByIdAndIsGuestIsFalseAndStatusOrderByCreatedAtDesc(user.getId(), LinkStatus.ACTIVE).stream()
                 .map(linkMapper::toResponse)
                 .toList();
     }
@@ -138,13 +142,14 @@ public class LinkService {
         User user = currentUserService.requireCurrentUser();
         Link link =
                 linkRepository
-                        .findByPublicId(linkPublicId)
+                        .findByPublicIdAndStatus(linkPublicId, LinkStatus.ACTIVE)
                         .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "link_not_found", "Link not found"));
         if (link.isGuest() || link.getCreatedBy() == null || !link.getCreatedBy().getId().equals(user.getId())) {
             throw new ApiException(HttpStatus.FORBIDDEN, "forbidden", "You cannot delete this link");
         }
         linkRedisCache.evict(link.getTopic(), link.getSlug());
-        linkRepository.delete(link);
-        log.info("Deleted link {}", linkPublicId);
+        link.setStatus(LinkStatus.DELETED);
+        linkRepository.save(link);
+        log.info("Soft deleted link {}", linkPublicId);
     }
 }

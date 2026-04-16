@@ -64,14 +64,14 @@ class LinkControllerTest {
                         .topic("_")
                         .slug("mylink")
                         .shortUrl("https://go.example/r/_/mylink")
-                        .originalUrl("https://example.com/page")
+                        .originalUrl("https://example.com/")
                         .createdAt(Instant.parse("2024-06-01T12:00:00Z"))
                         .build();
         when(linkService.create(any(CreateLinkRequest.class))).thenReturn(created);
 
         CreateLinkRequest body = new CreateLinkRequest();
         body.setSlug("mylink");
-        body.setOriginalUrl("https://example.com/page");
+        body.setOriginalUrl("https://example.com/");
 
         mockMvc.perform(
                         post("/api/v1/links")

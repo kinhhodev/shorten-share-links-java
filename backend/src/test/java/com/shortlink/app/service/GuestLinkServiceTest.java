@@ -10,6 +10,7 @@ import com.shortlink.app.api.dto.request.CreateGuestLinkRequest;
 import com.shortlink.app.api.dto.response.GuestLinkCreatedResponse;
 import com.shortlink.app.config.AppProperties;
 import com.shortlink.app.domain.entity.Link;
+import com.shortlink.app.domain.entity.LinkStatus;
 import com.shortlink.app.repository.LinkRepository;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,10 +45,10 @@ class GuestLinkServiceTest {
     void createPersistsGuestLinkAndCaches() {
         CreateGuestLinkRequest req = new CreateGuestLinkRequest();
         req.setSlug("abc");
-        req.setOriginalUrl("https://example.com/page");
+        req.setOriginalUrl("https://example.com/");
         req.setTopic(null);
 
-        when(linkRepository.existsByTopicAndSlug("_", "abc")).thenReturn(false);
+        when(linkRepository.existsByTopicAndSlugAndStatus("_", "abc", LinkStatus.ACTIVE)).thenReturn(false);
         when(linkRepository.saveAndFlush(any(Link.class)))
                 .thenAnswer(
                         inv -> {
@@ -61,7 +62,7 @@ class GuestLinkServiceTest {
         GuestLinkCreatedResponse res = guestLinkService.create(req);
 
         assertThat(res.getShortUrl()).isEqualTo("https://go.example/r/t/slug");
-        verify(linkRedisCache).put(eq("_"), eq("abc"), eq("https://example.com/page"), any());
+        verify(linkRedisCache).put(eq("_"), eq("abc"), eq("https://example.com/"), any());
     }
 
     @Test
@@ -71,8 +72,8 @@ class GuestLinkServiceTest {
         req.setOriginalUrl("https://example.com");
         req.setTopic("blog");
 
-        when(linkRepository.existsByTopicAndSlug("blog", "name")).thenReturn(true);
-        when(linkRepository.existsByTopicAndSlug("blog", "name-1")).thenReturn(false);
+        when(linkRepository.existsByTopicAndSlugAndStatus("blog", "name", LinkStatus.ACTIVE)).thenReturn(true);
+        when(linkRepository.existsByTopicAndSlugAndStatus("blog", "name-1", LinkStatus.ACTIVE)).thenReturn(false);
         when(linkRepository.saveAndFlush(any(Link.class)))
                 .thenAnswer(
                         inv -> {
