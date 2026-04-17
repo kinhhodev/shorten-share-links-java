@@ -25,6 +25,11 @@ public interface LinkRepository extends JpaRepository<Link, UUID> {
 
     List<Link> findByCreatedByIdAndTopicAndStatus(UUID createdById, String topic, LinkStatus status);
 
+    List<Link> findByCreatedByIdAndTopicAndStatusOrderByCreatedAtDesc(UUID createdById, String topic, LinkStatus status);
+
+    List<Link> findByCreatedByIdAndTopicIgnoreCaseAndStatusOrderByCreatedAtDesc(
+            UUID createdById, String topic, LinkStatus status);
+
     @Query("SELECT l FROM Link l WHERE l.isGuest = true AND l.status = 'ACTIVE' AND l.expireAt < :cutoff")
     List<Link> findGuestLinksExpiredBefore(@Param("cutoff") Instant cutoff);
 

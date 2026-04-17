@@ -1,18 +1,24 @@
 package com.shortlink.app.service;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.shortlink.app.api.dto.response.LinkResponse;
 import com.shortlink.app.domain.entity.Link;
 import com.shortlink.app.domain.entity.LinkStatus;
 import com.shortlink.app.domain.entity.Topic;
 import com.shortlink.app.domain.entity.TopicStatus;
 import com.shortlink.app.domain.entity.User;
+import com.shortlink.app.api.mapper.LinkMapper;
 import com.shortlink.app.repository.LinkRepository;
 import com.shortlink.app.repository.TopicRepository;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -34,6 +40,9 @@ class TopicServiceTest {
     @Mock
     private LinkRedisCache linkRedisCache;
 
+    @Mock
+    private LinkMapper linkMapper;
+
     @InjectMocks
     private TopicService topicService;
 
@@ -53,5 +62,62 @@ class TopicServiceTest {
         verify(linkRedisCache).evict(eq("toeic"), eq("idioms"));
         verify(linkRepository).updateStatusByOwnerIdAndTopic(userId, "toeic", LinkStatus.ACTIVE, LinkStatus.DELETED);
         verify(topicRepository).save(topic);
+    }
+
+    @Test
+    void restoreTopicWithoutConflictsRestoresLinks() {
+        UUID userId = UUID.randomUUID();
+        User user = User.builder().id(userId).publicId(UUID.randomUUID()).email("u@example.com").enabled(true).build();
+        Topic topic = Topic.builder().owner(user).name("toeic").status(TopicStatus.DELETED).build();
+        Link link = Link.builder()
+                .topic("toeic")
+                .slug("idioms")
+                .status(LinkStatus.DELETED)
+                .originalUrl("https://example.com")
+                .build();
+
+        when(currentUserService.requireCurrentUser()).thenReturn(user);
+        when(topicRepository.findByOwnerIdAndName(userId, "toeic")).thenReturn(java.util.Optional.of(topic));
+        when(linkRepository.findByCreatedByIdAndTopicAndStatus(userId, "toeic", LinkStatus.DELETED))
+                .thenReturn(java.util.List.of(link));
+        when(linkRepository.existsByTopicAndSlugAndStatus("toeic", "idioms", LinkStatus.ACTIVE)).thenReturn(false);
+
+        topicService.restoreMineByName("toeic");
+
+        verify(linkRedisCache).put(eq("toeic"), eq("idioms"), eq("https://example.com"), any());
+        verify(topicRepository).save(topic);
+    }
+
+    @Test
+    void listMineTopicLinksByStatusDoesNotRequireTopicRow() {
+        UUID userId = UUID.randomUUID();
+        User user = User.builder().id(userId).publicId(UUID.randomUUID()).email("u@example.com").enabled(true).build();
+        Link link = Link.builder()
+                .topic("toeic")
+                .slug("idioms")
+                .status(LinkStatus.DELETED)
+                .originalUrl("https://example.com")
+                .isGuest(false)
+                .publicId(UUID.randomUUID())
+                .createdAt(Instant.parse("2026-01-01T00:00:00Z"))
+                .build();
+        LinkResponse mapped = LinkResponse.builder()
+                .publicId(link.getPublicId())
+                .topic("toeic")
+                .slug("idioms")
+                .shortUrl("https://go.example/r/toeic/idioms")
+                .originalUrl("https://example.com")
+                .createdAt(link.getCreatedAt())
+                .build();
+
+        when(currentUserService.requireCurrentUser()).thenReturn(user);
+        when(linkRepository.findByCreatedByIdAndTopicIgnoreCaseAndStatusOrderByCreatedAtDesc(
+                        userId, "toeic", LinkStatus.DELETED))
+                .thenReturn(List.of(link));
+        when(linkMapper.toResponse(link)).thenReturn(mapped);
+
+        Assertions.assertThat(topicService.listMineTopicLinksByStatus("toeic", LinkStatus.DELETED))
+                .containsExactly(mapped);
+        verify(topicRepository, never()).findByOwnerIdAndName(any(), any());
     }
 }

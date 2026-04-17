@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { UserMenuDropdown } from '@/components/ui/UserMenuDropdown';
 import { clearToken, getAuthUser, subscribeAuthUser } from '@/lib/authStorage';
 import { getErrorMessage, linksApi, topicsApi } from '@/services/api';
+import type { Link } from '@/services/api';
 
 export function DashboardPage() {
   const navigate = useNavigate();
@@ -15,11 +16,23 @@ export function DashboardPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showCopyNotice, setShowCopyNotice] = useState(false);
   const [userLabel, setUserLabel] = useState(() => initialUser?.displayName ?? initialUser?.email ?? 'Account');
+  const [viewMode, setViewMode] = useState<'active' | 'trash'>('active');
+  const [openTrashTopics, setOpenTrashTopics] = useState<Record<string, boolean>>({});
+  const [trashLinksByTopic, setTrashLinksByTopic] = useState<
+    Record<string, { loading: boolean; error: string | null; links: Link[] }>
+  >({});
   const copyNoticeTimerRef = useRef<number | null>(null);
 
   const linksQuery = useQuery({
     queryKey: ['links', 'mine'],
     queryFn: () => linksApi.listMine(),
+    enabled: viewMode === 'active',
+  });
+
+  const deletedTopicsQuery = useQuery({
+    queryKey: ['topics', 'deleted'],
+    queryFn: () => topicsApi.listTopicsByStatus('DELETED'),
+    enabled: viewMode === 'trash',
   });
 
   const filteredLinks = useMemo(() => {
@@ -41,6 +54,17 @@ export function DashboardPage() {
     return Object.entries(groups).map(([topic, links]) => ({ topic, links: links ?? [] }));
   }, [filteredLinks]);
 
+  const filteredDeletedTopics = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!deletedTopicsQuery.data) {
+      return [];
+    }
+    if (!q) {
+      return deletedTopicsQuery.data;
+    }
+    return deletedTopicsQuery.data.filter((t) => t.name.toLowerCase().includes(q));
+  }, [deletedTopicsQuery.data, searchTerm]);
+
   const deleteLink = useMutation({
     mutationFn: (linkPublicId: string) => linksApi.deleteLink(linkPublicId),
     onSuccess: () => {
@@ -52,6 +76,19 @@ export function DashboardPage() {
     mutationFn: (topicName: string) => topicsApi.deleteTopic(topicName),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['links', 'mine'] });
+      void queryClient.invalidateQueries({ queryKey: ['topics', 'deleted'] });
+      setTrashLinksByTopic({});
+      setOpenTrashTopics({});
+    },
+  });
+
+  const restoreTopic = useMutation({
+    mutationFn: (topicName: string) => topicsApi.restoreTopic(topicName),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['links', 'mine'] });
+      void queryClient.invalidateQueries({ queryKey: ['topics', 'deleted'] });
+      setTrashLinksByTopic({});
+      setOpenTrashTopics({});
     },
   });
 
@@ -73,6 +110,43 @@ export function DashboardPage() {
       return;
     }
     deleteTopic.mutate(topic);
+  }
+
+  function onRestoreTopic(topic: string) {
+    const accepted = window.confirm(
+      `Restore topic "${topic}"? All links in this topic will become active again if no slug conflicts.`
+    );
+    if (!accepted) return;
+    restoreTopic.mutate(topic);
+  }
+
+  function toggleTrashTopic(topicName: string) {
+    setOpenTrashTopics((prev) => {
+      const nextOpen = !prev[topicName];
+      const cached = trashLinksByTopic[topicName];
+      const shouldFetch = nextOpen && (!cached || cached.error);
+      if (shouldFetch) {
+        setTrashLinksByTopic((current) => ({
+          ...current,
+          [topicName]: { loading: true, error: null, links: cached?.links ?? [] },
+        }));
+        void topicsApi
+          .listTopicLinksByStatus(topicName, 'DELETED')
+          .then((links) => {
+            setTrashLinksByTopic((current) => ({
+              ...current,
+              [topicName]: { loading: false, error: null, links },
+            }));
+          })
+          .catch((error) => {
+            setTrashLinksByTopic((current) => ({
+              ...current,
+              [topicName]: { loading: false, error: getErrorMessage(error), links: [] },
+            }));
+          });
+      }
+      return { ...prev, [topicName]: nextOpen };
+    });
   }
 
   async function copyShortLink(shortUrl: string) {
@@ -122,7 +196,18 @@ export function DashboardPage() {
 
       <div className="grid gap-8">
         <section>
-          <h2 className="mb-4 font-display text-2xl uppercase">Your links</h2>
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <h2 className="font-display text-2xl uppercase">
+              {viewMode === 'active' ? 'Your links' : 'Trash'}
+            </h2>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setViewMode((prev) => (prev === 'active' ? 'trash' : 'active'))}
+            >
+              {viewMode === 'active' ? 'Trash' : 'Back'}
+            </Button>
+          </div>
           <div className="relative mb-4">
             <input
               type="text"
@@ -140,24 +225,28 @@ export function DashboardPage() {
               </svg>
             </span>
           </div>
-          {linksQuery.isLoading && <p className="font-bold text-neutral-700">Loading…</p>}
-          {linksQuery.error && (
-            <p className="border-4 border-black bg-[#fecaca] p-4 font-semibold">
-              {getErrorMessage(linksQuery.error)}
-            </p>
-          )}
-          {linksQuery.data && linksQuery.data.length === 0 && (
-            <Card>
-              <p className="font-semibold text-neutral-800">No links yet. Use Create Short Link to add your first one.</p>
-            </Card>
-          )}
-          {linksQuery.data && linksQuery.data.length > 0 && groupedLinks.length === 0 && (
-            <Card>
-              <p className="font-semibold text-neutral-800">No matching links found.</p>
-            </Card>
-          )}
-          {groupedLinks.length > 0 && (
+          {viewMode === 'active' ? (
             <div className="space-y-4">
+              {linksQuery.isLoading && <p className="font-bold text-neutral-700">Loading…</p>}
+              {linksQuery.error && (
+                <p className="border-4 border-black bg-[#fecaca] p-4 font-semibold">
+                  {getErrorMessage(linksQuery.error)}
+                </p>
+              )}
+              {linksQuery.data && linksQuery.data.length === 0 && (
+                <Card>
+                  <p className="font-semibold text-neutral-800">
+                    No links yet. Use Create Short Link to add your first one.
+                  </p>
+                </Card>
+              )}
+              {linksQuery.data && linksQuery.data.length > 0 && groupedLinks.length === 0 && (
+                <Card>
+                  <p className="font-semibold text-neutral-800">No matching links found.</p>
+                </Card>
+              )}
+              {groupedLinks.length > 0 && (
+                <div className="space-y-4">
               {groupedLinks.map((group) => (
                 <Card key={group.topic}>
                   <div className="flex w-full items-center justify-between border-4 border-black bg-white px-4 py-3 text-left font-display text-xl uppercase">
@@ -167,15 +256,13 @@ export function DashboardPage() {
                     <span className="flex items-center gap-3">
                       <button
                         type="button"
-                        className="inline-flex h-8 w-8 items-center justify-center border-4 border-black bg-[#fda4af] text-black hover:bg-[#fecdd3] disabled:opacity-60"
+                        className="inline-flex h-8 items-center justify-center border-4 border-black bg-[#fda4af] px-3 text-base text-black hover:bg-[#fecdd3] disabled:pointer-events-none disabled:opacity-50"
                         onClick={() => onDeleteTopic(group.topic)}
                         disabled={deleteTopic.isPending}
                         aria-label={`Delete topic ${group.topic}`}
                         title="Delete topic"
                       >
-                        <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden="true">
-                          <path d="M9 3h6l1 2h5v2H3V5h5l1-2Zm-2 6h10v10a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V9Zm3 2v8h2v-8h-2Zm4 0v8h2v-8h-2Z" />
-                        </svg>
+                        Delete
                       </button>
                       <button type="button" className="text-base" onClick={() => toggleTopic(group.topic)} aria-label="Toggle topic">
                         {openTopics[group.topic] ? '▲' : '▼'}
@@ -230,6 +317,88 @@ export function DashboardPage() {
                   )}
                 </Card>
               ))}
+            </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {deletedTopicsQuery.isLoading && <p className="font-bold text-neutral-700">Loading…</p>}
+              {deletedTopicsQuery.error && (
+                <p className="border-4 border-black bg-[#fecaca] p-4 font-semibold">
+                  {getErrorMessage(deletedTopicsQuery.error)}
+                </p>
+              )}
+              {deletedTopicsQuery.data && deletedTopicsQuery.data.length === 0 && (
+                <Card>
+                  <p className="font-semibold text-neutral-800">No deleted topics.</p>
+                </Card>
+              )}
+              {deletedTopicsQuery.data && deletedTopicsQuery.data.length > 0 && (
+                <div className="space-y-3">
+                  {filteredDeletedTopics.map((t) => (
+                      <Card key={t.name}>
+                        <div className="flex items-center justify-between gap-3 border-4 border-black bg-white px-4 py-3">
+                          <button
+                            type="button"
+                            className="font-display text-xl"
+                            onClick={() => toggleTrashTopic(t.name)}
+                          >
+                            {t.name}
+                          </button>
+                          <div className="flex items-center gap-3">
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              disabled={restoreTopic.isPending}
+                              onClick={() => onRestoreTopic(t.name)}
+                            >
+                              Restore
+                            </Button>
+                            <button
+                              type="button"
+                              className="text-base"
+                              onClick={() => toggleTrashTopic(t.name)}
+                              aria-label={`Toggle deleted links for ${t.name}`}
+                            >
+                              {openTrashTopics[t.name] ? '▲' : '▼'}
+                            </button>
+                          </div>
+                        </div>
+                        {openTrashTopics[t.name] && (
+                          <div className="mt-4 space-y-3">
+                            {trashLinksByTopic[t.name]?.loading && (
+                              <p className="font-bold text-neutral-700">Loading links…</p>
+                            )}
+                            {trashLinksByTopic[t.name]?.error && (
+                              <p className="border-4 border-black bg-[#fecaca] p-3 font-semibold">
+                                {trashLinksByTopic[t.name]?.error}
+                              </p>
+                            )}
+                            {!trashLinksByTopic[t.name]?.loading &&
+                              !trashLinksByTopic[t.name]?.error &&
+                              (trashLinksByTopic[t.name]?.links.length ?? 0) === 0 && (
+                                <p className="font-semibold text-neutral-700">No deleted links in this topic.</p>
+                              )}
+                            {(trashLinksByTopic[t.name]?.links ?? []).map((link) => (
+                              <Card key={link.publicId}>
+                                <div className="space-y-1">
+                                  <a
+                                    href={link.shortUrl}
+                                    className="break-all text-sm font-semibold text-black underline"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                  >
+                                    {link.shortUrl}
+                                  </a>
+                                </div>
+                              </Card>
+                            ))}
+                          </div>
+                        )}
+                      </Card>
+                    ))}
+                </div>
+              )}
             </div>
           )}
         </section>

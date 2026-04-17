@@ -53,6 +53,11 @@ export interface GuestLinkCreatedResponse {
   shortUrl: string;
 }
 
+export interface TopicSummary {
+  name: string;
+  status: 'ACTIVE' | 'DELETED';
+}
+
 export interface ProblemDetailBody {
   type?: string;
   title?: string;
