@@ -8,6 +8,28 @@ import { clearToken, getAuthUser, subscribeAuthUser } from '@/lib/authStorage';
 import { getErrorMessage, linksApi, topicsApi } from '@/services/api';
 import type { Link } from '@/services/api';
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_EMAIL_LENGTH = 320;
+
+function isValidRecipientEmail(email: string): boolean {
+  if (email.length > MAX_EMAIL_LENGTH) {
+    return false;
+  }
+  return EMAIL_PATTERN.test(email);
+}
+
+function toSafeExternalUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+      return parsed.toString();
+    }
+  } catch {
+    // Fall back to a safe inert target for malformed/untrusted URLs.
+  }
+  return '#';
+}
+
 export function DashboardPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -92,6 +114,11 @@ export function DashboardPage() {
     },
   });
 
+  const shareTopic = useMutation({
+    mutationFn: ({ topicName, recipientEmail }: { topicName: string; recipientEmail: string }) =>
+      topicsApi.shareTopic(topicName, { recipientEmail }),
+  });
+
   function logout() {
     clearToken();
     void queryClient.clear();
@@ -118,6 +145,34 @@ export function DashboardPage() {
     );
     if (!accepted) return;
     restoreTopic.mutate(topic);
+  }
+
+  function onShareTopic(topic: string) {
+    const email = window.prompt(`Share topic "${topic}" to email:`);
+    if (!email) {
+      return;
+    }
+    const recipientEmail = email.trim().toLowerCase();
+    if (!recipientEmail) {
+      return;
+    }
+    if (!isValidRecipientEmail(recipientEmail)) {
+      window.alert('Please enter a valid recipient email address.');
+      return;
+    }
+    shareTopic.mutate(
+      { topicName: topic, recipientEmail },
+      {
+        onSuccess: (result) => {
+          window.alert(
+            `Shared ${result.sharedLinksCount} links to ${result.recipientEmail} (topic: ${result.topic}).`
+          );
+        },
+        onError: (error) => {
+          window.alert(getErrorMessage(error));
+        },
+      }
+    );
   }
 
   function toggleTrashTopic(topicName: string) {
@@ -256,6 +311,14 @@ export function DashboardPage() {
                     <span className="flex items-center gap-3">
                       <button
                         type="button"
+                        className="inline-flex h-8 items-center justify-center border-4 border-black bg-[#79BAEC] px-3 text-base text-black hover:bg-[#82CAFF] disabled:pointer-events-none disabled:opacity-50"
+                        disabled={shareTopic.isPending}
+                        onClick={() => onShareTopic(group.topic)}
+                      >
+                        Share
+                      </button>
+                      <button
+                        type="button"
                         className="inline-flex h-8 items-center justify-center border-4 border-black bg-[#fda4af] px-3 text-base text-black hover:bg-[#fecdd3] disabled:pointer-events-none disabled:opacity-50"
                         onClick={() => onDeleteTopic(group.topic)}
                         disabled={deleteTopic.isPending}
@@ -277,10 +340,10 @@ export function DashboardPage() {
                           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <div className="min-w-0 flex-1">
                               <a
-                                href={link.shortUrl}
+                                href={toSafeExternalUrl(link.shortUrl)}
                                 className="break-all text-sm font-semibold text-black underline"
                                 target="_blank"
-                                rel="noreferrer"
+                                rel="noopener noreferrer"
                               >
                                 {link.shortUrl}
                               </a>
@@ -383,10 +446,10 @@ export function DashboardPage() {
                               <Card key={link.publicId}>
                                 <div className="space-y-1">
                                   <a
-                                    href={link.shortUrl}
+                                    href={toSafeExternalUrl(link.shortUrl)}
                                     className="break-all text-sm font-semibold text-black underline"
                                     target="_blank"
-                                    rel="noreferrer"
+                                    rel="noopener noreferrer"
                                   >
                                     {link.shortUrl}
                                   </a>

@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.shortlink.app.api.dto.response.LinkResponse;
+import com.shortlink.app.api.dto.response.TopicShareResponse;
 import com.shortlink.app.api.dto.response.TopicSummaryResponse;
 import com.shortlink.app.domain.entity.TopicStatus;
 import java.time.Instant;
@@ -53,6 +54,25 @@ class TopicControllerTest {
     void restoreTopicReturnsNoContent() throws Exception {
         mockMvc.perform(post("/api/v1/topics/{topicName}/restore", "toeic")).andExpect(status().isNoContent());
         verify(topicService).restoreMineByName(eq("toeic"));
+    }
+
+    @Test
+    @WithMockUser
+    void shareTopicReturnsJson() throws Exception {
+        TopicShareResponse response = TopicShareResponse.builder()
+                .recipientEmail("friend@example.com")
+                .topic("toeic")
+                .sharedLinksCount(2)
+                .build();
+        when(topicService.shareMineByNameToEmail("toeic", "friend@example.com")).thenReturn(response);
+
+        mockMvc.perform(post("/api/v1/topics/{topicName}/share", "toeic")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{\"recipientEmail\":\"friend@example.com\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.recipientEmail").value("friend@example.com"))
+                .andExpect(jsonPath("$.topic").value("toeic"))
+                .andExpect(jsonPath("$.sharedLinksCount").value(2));
     }
 
     @Test

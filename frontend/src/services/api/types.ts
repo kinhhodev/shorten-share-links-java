@@ -58,6 +58,16 @@ export interface TopicSummary {
   status: 'ACTIVE' | 'DELETED';
 }
 
+export interface ShareTopicRequest {
+  recipientEmail: string;
+}
+
+export interface TopicShareResult {
+  recipientEmail: string;
+  topic: string;
+  sharedLinksCount: number;
+}
+
 export interface ProblemDetailBody {
   type?: string;
   title?: string;
