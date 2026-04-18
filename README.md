@@ -103,7 +103,7 @@ Stop and remove containers:
 docker compose down
 ```
 
-To enable optional Google OAuth2, add profile **`oauth2`** and credentials (see `backend/src/main/resources/application-oauth2.yml`).
+OAuth2 client settings now live in `backend/src/main/resources/application.yml`; provide `OAUTH2_*` env vars to enable Google/GitHub login.
 
 ## Slug Allocation Rules
 

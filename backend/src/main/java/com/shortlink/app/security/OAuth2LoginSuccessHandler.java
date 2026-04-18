@@ -9,14 +9,13 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.annotation.Profile;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
 @Component
-@Profile("oauth2")
 @RequiredArgsConstructor
 public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
@@ -27,8 +26,9 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication)
             throws IOException {
-        OAuth2User oauth2User = (OAuth2User) authentication.getPrincipal();
-        User user = oauth2UserSyncService.syncFromGoogle(oauth2User);
+        OAuth2AuthenticationToken oauthToken = (OAuth2AuthenticationToken) authentication;
+        OAuth2User oauth2User = oauthToken.getPrincipal();
+        User user = oauth2UserSyncService.syncOAuth2User(oauth2User, oauthToken.getAuthorizedClientRegistrationId());
         String token = jwtService.generateToken(user.getId(), user.getEmail());
         String base = appProperties.getOauth2().getPostLoginRedirectUri();
         String sep = base.contains("?") ? "&" : "?";

@@ -24,6 +24,27 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
       timeout: 2s
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${OAUTH2_GOOGLE_CLIENT_ID:placeholder-google-client-id}
+            client-secret: ${OAUTH2_GOOGLE_CLIENT_SECRET:placeholder-google-client-secret}
+            redirect-uri: ${OAUTH2_AUTHORIZATION_CALLBACK_BASE_URL:${PUBLIC_BASE_URL:http://localhost:8080}}/login/oauth2/code/{registrationId}
+            scope: openid, profile, email
+          github:
+            client-id: ${OAUTH2_GITHUB_CLIENT_ID}
+            client-secret: ${OAUTH2_GITHUB_CLIENT_SECRET}
+            redirect-uri: ${OAUTH2_AUTHORIZATION_CALLBACK_BASE_URL:${PUBLIC_BASE_URL:http://localhost:8080}}/login/oauth2/code/{registrationId}
+            scope: read:user,user:email
+        provider:
+          google:
+            issuer-uri: https://accounts.google.com
+          github:
+            authorization-uri: https://github.com/login/oauth/authorize
+            token-uri: https://github.com/login/oauth/access_token
+            user-info-uri: https://api.github.com/user
 server:
   port: ${SERVER_PORT:8080}
   servlet:
@@ -32,9 +53,9 @@ server:
     enabled: true
 
 app:
-  public-base-url: ${PUBLIC_BASE_URL:http://localhost:8080}
+  public-base-url: ${PUBLIC_BASE_URL:http://localhost:5173}
   jwt:
-    secret: ${JWT_SECRET:change-me-use-at-least-256-bits-in-production-please-change-this-secret-key-now}
+    secret: ${JWT_SECRET:cEZqwKkkoTn2Zwx2Bos2939DHnZJVcDr}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}
   redirect:
     path-prefix: /r
@@ -49,7 +70,8 @@ app:
     link-ttl-days: ${GUEST_LINK_TTL_DAYS:30}
     cleanup-cron: "0 0 3 * * *"
   oauth2:
-    post-login-redirect-uri: ${OAUTH2_REDIRECT_URI:http://localhost:3000/auth/callback}
+    # Same origin as the SPA (nginx :80 in Docker, or http://localhost:5173 in Vite dev)
+    post-login-redirect-uri: ${OAUTH2_REDIRECT_URI:http://localhost:5173/auth/callback}
 
 logging:
   level:

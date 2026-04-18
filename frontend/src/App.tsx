@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { AppProviders } from '@/app/providers';
+import { OAuthCallbackPage } from '@/features/auth/pages/OAuthCallbackPage';
 import { DashboardPage } from '@/features/dashboard/pages/DashboardPage';
 import { HomePage } from '@/features/home/pages/HomePage';
 import { clearToken, getAuthUser, getToken, setAuthUser } from '@/lib/authStorage';
@@ -59,6 +60,7 @@ export default function App() {
             }
           />
           <Route path="/" element={<HomePage />} />
+          <Route path="/auth/callback" element={<OAuthCallbackPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

@@ -75,9 +75,18 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<ProblemDetail> handleNoResource(NoResourceFoundException ex, HttpServletRequest request) {
-        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, "Resource not found");
-        pd.setTitle("not_found");
-        pd.setInstance(URI.create(request.getRequestURI()));
+        String path = request.getRequestURI();
+        String detail = "Resource not found";
+        String title = "not_found";
+        if (path.startsWith("/oauth2/") || path.startsWith("/login/oauth2/")) {
+            title = "oauth2_not_available";
+            detail =
+                    "No OAuth2 login handler for this path. Set OAUTH2_* env vars and use GitHub callback "
+                            + "{PUBLIC_BASE_URL}/login/oauth2/code/github.";
+        }
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, detail);
+        pd.setTitle(title);
+        pd.setInstance(URI.create(path));
         pd.setProperty("timestamp", Instant.now());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(pd);
     }

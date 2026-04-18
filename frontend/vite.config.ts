@@ -16,6 +16,15 @@ export default defineConfig({
         target: 'http://localhost:8080',
         changeOrigin: true,
       },
+      // Spring OAuth2; dev must proxy like nginx or SPA serves index.html and * route redirects to /
+      '/oauth2': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+      '/login/oauth2': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
       '/r': {
         target: 'http://localhost:8080',
         changeOrigin: true,
