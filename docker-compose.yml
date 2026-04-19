@@ -31,7 +31,7 @@ services:
       - "8080:8080"
     environment:
       # Add ",oauth2" when using Google/GitHub login (set OAUTH2_* below).
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:docker,oauth2}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
       DB_HOST: postgres
       DB_PORT: "5432"
       DB_NAME: shortlink
@@ -39,17 +39,17 @@ services:
       DB_PASSWORD: shortlink
       REDIS_HOST: redis
       REDIS_PORT: "6379"
-      JWT_SECRET: ${JWT_SECRET:-dJj7ZSdAsCknDJgaWQ2k2gr2ahJSVcQP}
+      JWT_SECRET: ${JWT_SECRET}
       # Public URL for links in local dev (Vite frontend on :5173)
-      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:5173}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL}
       # Where the backend redirects after OAuth (SPA should read ?token= from this URL)
-      OAUTH2_REDIRECT_URI: ${OAUTH2_REDIRECT_URI:-http://localhost:5173/auth/callback}
+      OAUTH2_REDIRECT_URI: ${OAUTH2_REDIRECT_URI}
       # Callback base URL registered in GitHub/Google OAuth app (backend on :8080)
-      OAUTH2_AUTHORIZATION_CALLBACK_BASE_URL: ${OAUTH2_AUTHORIZATION_CALLBACK_BASE_URL:-http://localhost:8080}
-      OAUTH2_GOOGLE_CLIENT_ID: ${OAUTH2_GOOGLE_CLIENT_ID:-}
-      OAUTH2_GOOGLE_CLIENT_SECRET: ${OAUTH2_GOOGLE_CLIENT_SECRET:-}
-      OAUTH2_GITHUB_CLIENT_ID: ${OAUTH2_GITHUB_CLIENT_ID:-}
-      OAUTH2_GITHUB_CLIENT_SECRET: ${OAUTH2_GITHUB_CLIENT_SECRET:-}
+      OAUTH2_AUTHORIZATION_CALLBACK_BASE_URL: ${OAUTH2_AUTHORIZATION_CALLBACK_BASE_URL}
+      OAUTH2_GOOGLE_CLIENT_ID: ${OAUTH2_GOOGLE_CLIENT_ID}
+      OAUTH2_GOOGLE_CLIENT_SECRET: ${OAUTH2_GOOGLE_CLIENT_SECRET}
+      OAUTH2_GITHUB_CLIENT_ID: ${OAUTH2_GITHUB_CLIENT_ID}
+      OAUTH2_GITHUB_CLIENT_SECRET: ${OAUTH2_GITHUB_CLIENT_SECRET}
     depends_on:
       postgres:
         condition: service_healthy

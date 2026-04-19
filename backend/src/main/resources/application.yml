@@ -2,9 +2,9 @@ spring:
   application:
     name: shorten-share-links
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:shortlink}
-    username: ${DB_USER:shortlink}
-    password: ${DB_PASSWORD:shortlink}
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
     hikari:
       maximum-pool-size: 20
       minimum-idle: 5
@@ -21,22 +21,22 @@ spring:
     change-log: classpath:db/changelog/db.changelog-master.yaml
   data:
     redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
       timeout: 2s
   security:
     oauth2:
       client:
         registration:
           google:
-            client-id: ${OAUTH2_GOOGLE_CLIENT_ID:placeholder-google-client-id}
-            client-secret: ${OAUTH2_GOOGLE_CLIENT_SECRET:placeholder-google-client-secret}
-            redirect-uri: ${OAUTH2_AUTHORIZATION_CALLBACK_BASE_URL:${PUBLIC_BASE_URL:http://localhost:8080}}/login/oauth2/code/{registrationId}
+            client-id: ${OAUTH2_GOOGLE_CLIENT_ID}
+            client-secret: ${OAUTH2_GOOGLE_CLIENT_SECRET}
+            redirect-uri: ${OAUTH2_AUTHORIZATION_CALLBACK_BASE_URL}/login/oauth2/code/{registrationId}
             scope: openid, profile, email
           github:
             client-id: ${OAUTH2_GITHUB_CLIENT_ID}
             client-secret: ${OAUTH2_GITHUB_CLIENT_SECRET}
-            redirect-uri: ${OAUTH2_AUTHORIZATION_CALLBACK_BASE_URL:${PUBLIC_BASE_URL:http://localhost:8080}}/login/oauth2/code/{registrationId}
+            redirect-uri: ${OAUTH2_AUTHORIZATION_CALLBACK_BASE_URL}/login/oauth2/code/{registrationId}
             scope: read:user,user:email
         provider:
           google:
@@ -53,25 +53,25 @@ server:
     enabled: true
 
 app:
-  public-base-url: ${PUBLIC_BASE_URL:http://localhost:5173}
+  public-base-url: ${PUBLIC_BASE_URL}
   jwt:
-    secret: ${JWT_SECRET:cEZqwKkkoTn2Zwx2Bos2939DHnZJVcDr}
-    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+    secret: ${JWT_SECRET}
+    expiration-ms: ${JWT_EXPIRATION_MS}
   redirect:
     path-prefix: /r
   rate-limit:
-    requests-per-window: ${RATE_LIMIT_REQUESTS:120}
-    window-seconds: ${RATE_LIMIT_WINDOW_SECONDS:60}
+    requests-per-window: ${RATE_LIMIT_REQUESTS}
+    window-seconds: ${RATE_LIMIT_WINDOW_SECONDS}
   link-cache:
-    ttl-seconds: ${LINK_CACHE_TTL_SECONDS:3600}
+    ttl-seconds: ${LINK_CACHE_TTL_SECONDS}
   guest-public:
-    create-requests-per-window: ${GUEST_CREATE_RATE_LIMIT:5}
-    create-window-seconds: ${GUEST_CREATE_RATE_WINDOW_SECONDS:10}
-    link-ttl-days: ${GUEST_LINK_TTL_DAYS:30}
-    cleanup-cron: "0 0 3 * * *"
+    create-requests-per-window: ${GUEST_CREATE_RATE_LIMIT}
+    create-window-seconds: ${GUEST_CREATE_RATE_WINDOW_SECONDS}
+    link-ttl-days: ${GUEST_LINK_TTL_DAYS}
+    cleanup-cron: ${CLEANUP_CRON}
   oauth2:
     # Same origin as the SPA (nginx :80 in Docker, or http://localhost:5173 in Vite dev)
-    post-login-redirect-uri: ${OAUTH2_REDIRECT_URI:http://localhost:5173/auth/callback}
+    post-login-redirect-uri: ${OAUTH2_REDIRECT_URI}
 
 logging:
   level:
@@ -84,7 +84,7 @@ spring:
     activate:
       on-profile: docker
   datasource:
-    url: jdbc:postgresql://postgres:5432/${DB_NAME:shortlink}
+    url: jdbc:postgresql://postgres:5432/${DB_NAME}
   data:
     redis:
       host: redis
