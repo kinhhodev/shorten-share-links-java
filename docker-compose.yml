@@ -29,6 +29,8 @@ services:
     image: hongockinh/shorten-share-links-backend:latest
     ports:
       - "8080:8080"
+    env_file:
+      - ./.env
     environment:
       # Add ",oauth2" when using Google/GitHub login (set OAUTH2_* below).
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
