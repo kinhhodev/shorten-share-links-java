@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
+import { getInvisibleTurnstileToken } from '@/lib/turnstile';
 import { getErrorMessage, linksApi, publicLinksApi } from '@/services/api';
 
 const TOPIC_SEGMENT_PATTERN = /^[a-zA-Z0-9_-]{1,100}$/;
@@ -19,11 +20,13 @@ export function CreateLinkForm({ authenticated = false }: CreateLinkFormProps) {
   const [originalUrl, setOriginalUrl] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [createdUrl, setCreatedUrl] = useState<string | null>(null);
+  const [verifyingTurnstile, setVerifyingTurnstile] = useState(false);
   const [showCopyNotice, setShowCopyNotice] = useState(false);
   const copyNoticeTimerRef = useRef<number | null>(null);
+  const turnstileRef = useRef<HTMLDivElement | null>(null);
 
   const mutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (turnstileToken?: string) => {
       const body = {
         originalUrl,
         slug: slug.trim(),
@@ -32,7 +35,7 @@ export function CreateLinkForm({ authenticated = false }: CreateLinkFormProps) {
       if (authenticated) {
         return linksApi.createLink(body);
       }
-      return publicLinksApi.createGuestLink(body);
+      return publicLinksApi.createGuestLink({ ...body, turnstileToken: turnstileToken ?? '' });
     },
     onSuccess: (data) => {
       setCreatedUrl(data.shortUrl);
@@ -113,14 +116,33 @@ export function CreateLinkForm({ authenticated = false }: CreateLinkFormProps) {
       )}
       <form
         className="flex w-full flex-col gap-3"
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
           setError(null);
           setCreatedUrl(null);
           if (!validate()) return;
-          mutation.mutate();
+          if (authenticated) {
+            mutation.mutate();
+            return;
+          }
+          if (!turnstileRef.current) {
+            setError('Turnstile is not ready.');
+            return;
+          }
+          setVerifyingTurnstile(true);
+          try {
+            const token = await getInvisibleTurnstileToken(turnstileRef.current);
+            mutation.mutate(token);
+          } catch (err) {
+            setError(err instanceof Error ? err.message : 'Turnstile verification failed.');
+          } finally {
+            setVerifyingTurnstile(false);
+          }
         }}
       >
+        {!authenticated && (
+          <div ref={turnstileRef} className="fixed left-0 top-0 h-px w-px overflow-hidden opacity-0" />
+        )}
         <div className="w-full">
           <Label htmlFor="guest-topic">Topic (optional)</Label>
           <Input
@@ -168,8 +190,8 @@ export function CreateLinkForm({ authenticated = false }: CreateLinkFormProps) {
           <p className="border-2 border-black bg-[#fecaca] px-3 py-2 text-sm font-semibold">{error}</p>
         )}
         <div className="w-full">
-          <Button type="submit" className="w-full" disabled={mutation.isPending}>
-            {mutation.isPending ? 'Saving…' : 'Create short link'}
+          <Button type="submit" className="w-full" disabled={mutation.isPending || verifyingTurnstile}>
+            {mutation.isPending || verifyingTurnstile ? 'Saving…' : 'Create short link'}
           </Button>
         </div>
       </form>

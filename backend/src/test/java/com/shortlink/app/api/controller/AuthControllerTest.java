@@ -1,6 +1,7 @@
 package com.shortlink.app.api.controller;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -18,6 +19,7 @@ import com.shortlink.app.security.JwtAuthenticationFilter;
 import com.shortlink.app.security.RateLimitFilter;
 import com.shortlink.app.service.AuthService;
 import com.shortlink.app.service.CurrentUserService;
+import com.shortlink.app.service.TurnstileService;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,6 +51,9 @@ class AuthControllerTest {
     @MockBean
     private RateLimitFilter rateLimitFilter;
 
+    @MockBean
+    private TurnstileService turnstileService;
+
     @Test
     void loginReturnsJson() throws Exception {
         AuthResponse res =
@@ -65,6 +70,7 @@ class AuthControllerTest {
         LoginRequest body = new LoginRequest();
         body.setEmail("user@example.com");
         body.setPassword("password123");
+        body.setTurnstileToken("login-token");
 
         mockMvc.perform(
                         post("/api/v1/auth/login")
@@ -74,6 +80,8 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.accessToken").value("jwt-token"))
                 .andExpect(jsonPath("$.tokenType").value("Bearer"))
                 .andExpect(jsonPath("$.displayName").value("Neo User"));
+
+        verify(turnstileService).verify("login-token");
     }
 
     @Test
@@ -93,6 +101,7 @@ class AuthControllerTest {
         body.setEmail("new@example.com");
         body.setPassword("password12345");
         body.setDisplayName("Neo");
+        body.setTurnstileToken("register-token");
 
         mockMvc.perform(
                         post("/api/v1/auth/register")
@@ -101,6 +110,8 @@ class AuthControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.accessToken").value("jwt-new"))
                 .andExpect(jsonPath("$.displayName").value("Neo"));
+
+        verify(turnstileService).verify("register-token");
     }
 
     @Test

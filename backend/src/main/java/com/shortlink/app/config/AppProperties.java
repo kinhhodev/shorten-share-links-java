@@ -17,6 +17,7 @@ public class AppProperties {
     private final LinkCache linkCache = new LinkCache();
     private final OAuth2 oauth2 = new OAuth2();
     private final GuestPublic guestPublic = new GuestPublic();
+    private final Turnstile turnstile = new Turnstile();
 
     /** Used to build absolute short URLs in API responses (e.g. https://go.example.com). */
     @Getter
@@ -66,5 +67,12 @@ public class AppProperties {
         private int linkTtlDays = 30;
         /** Spring {@code @Scheduled} cron (default: daily 03:00 UTC). */
         private String cleanupCron = "0 0 3 * * *";
+    }
+
+    @Getter
+    @Setter
+    public static class Turnstile {
+        private String secretKey = "";
+        private String verifyUrl = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
     }
 }

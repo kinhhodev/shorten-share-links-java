@@ -3,6 +3,7 @@ package com.shortlink.app.api.controller;
 import com.shortlink.app.api.dto.request.CreateGuestLinkRequest;
 import com.shortlink.app.api.dto.response.GuestLinkCreatedResponse;
 import com.shortlink.app.service.GuestLinkService;
+import com.shortlink.app.service.TurnstileService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -18,10 +19,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class PublicLinkController {
 
     private final GuestLinkService guestLinkService;
+    private final TurnstileService turnstileService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public GuestLinkCreatedResponse create(@Valid @RequestBody CreateGuestLinkRequest request) {
+        turnstileService.verify(request.getTurnstileToken());
         return guestLinkService.create(request);
     }
 }

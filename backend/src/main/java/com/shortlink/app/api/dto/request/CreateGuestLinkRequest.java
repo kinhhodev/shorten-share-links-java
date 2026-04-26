@@ -24,4 +24,7 @@ public class CreateGuestLinkRequest {
     @NotBlank
     @Size(max = 4096)
     private String originalUrl;
+
+    @NotBlank
+    private String turnstileToken;
 }

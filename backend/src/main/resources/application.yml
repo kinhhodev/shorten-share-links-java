@@ -62,6 +62,9 @@ app:
     create-window-seconds: ${GUEST_CREATE_RATE_WINDOW_SECONDS:10}
     link-ttl-days: ${GUEST_LINK_TTL_DAYS:30}
     cleanup-cron: "${CLEANUP_CRON:0 0 3 * * *}"
+  turnstile:
+    secret-key: ${TURNSTILE_SECRET_KEY:}
+    verify-url: ${TURNSTILE_VERIFY_URL:https://challenges.cloudflare.com/turnstile/v0/siteverify}
   oauth2:
     # Same origin as the SPA (nginx :80 in Docker, or http://localhost:5173 in Vite dev)
     post-login-redirect-uri: ${OAUTH2_REDIRECT_URI:http://localhost:5173/auth/callback}

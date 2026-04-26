@@ -18,12 +18,14 @@ export interface CurrentUserResponse {
 export interface LoginRequest {
   email: string;
   password: string;
+  turnstileToken: string;
 }
 
 export interface RegisterRequest {
   email: string;
   password: string;
   displayName?: string;
+  turnstileToken: string;
 }
 
 export interface Link {
@@ -47,6 +49,7 @@ export interface CreateGuestLinkRequest {
   topic?: string;
   slug: string;
   originalUrl: string;
+  turnstileToken: string;
 }
 
 export interface GuestLinkCreatedResponse {

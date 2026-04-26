@@ -27,7 +27,7 @@ cd frontend
 npm run build
 ```
 
-Serve the static output in `frontend/dist/` behind any static host; set **`VITE_API_BASE_URL`** to your API origin if it is not same-origin (see `frontend/.env.example`).
+Serve the static output in `frontend/dist/` behind any static host; set **`API_BASE_URL`** to your API origin if it is not same-origin (see `frontend/.env.example`).
 
 ### Frontend (Docker)
 
@@ -54,7 +54,7 @@ Set **`PUBLIC_BASE_URL`** so short links in JSON match how users reach the app (
 To build the UI with a fixed API origin instead of nginx proxying (not typical for this compose setup), pass a build arg:
 
 ```bash
-docker compose build --build-arg VITE_API_BASE_URL=https://api.example.com web
+docker compose build --build-arg API_BASE_URL=https://api.example.com web
 ```
 
 ## Build (backend, local)

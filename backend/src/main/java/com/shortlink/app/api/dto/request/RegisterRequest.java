@@ -21,4 +21,7 @@ public class RegisterRequest {
 
     @Size(max = 200)
     private String displayName;
+
+    @NotBlank
+    private String turnstileToken;
 }

@@ -10,8 +10,10 @@ RUN --mount=type=cache,target=/root/.npm \
 
 COPY . .
 
-ARG VITE_API_BASE_URL=
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ARG API_BASE_URL=
+ARG TURNSTILE_SITE_KEY=
+ENV API_BASE_URL=$API_BASE_URL
+ENV TURNSTILE_SITE_KEY=$TURNSTILE_SITE_KEY
 
 RUN --mount=type=cache,target=/root/.npm \
     npm run build

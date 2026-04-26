@@ -2,7 +2,7 @@ import axios, { type AxiosError } from 'axios';
 import { clearToken, getToken } from '@/lib/authStorage';
 import type { ProblemDetailBody } from './types';
 
-const baseURL = import.meta.env.VITE_API_BASE_URL ?? '';
+const baseURL = import.meta.env.API_BASE_URL ?? '';
 
 export const apiClient = axios.create({
   baseURL,

@@ -1,6 +1,7 @@
 package com.shortlink.app.api.controller;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -12,6 +13,7 @@ import com.shortlink.app.api.dto.response.GuestLinkCreatedResponse;
 import com.shortlink.app.security.JwtAuthenticationFilter;
 import com.shortlink.app.security.RateLimitFilter;
 import com.shortlink.app.service.GuestLinkService;
+import com.shortlink.app.service.TurnstileService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -39,6 +41,9 @@ class PublicLinkControllerTest {
     @MockBean
     private RateLimitFilter rateLimitFilter;
 
+    @MockBean
+    private TurnstileService turnstileService;
+
     @Test
     void postCreatesGuestLink() throws Exception {
         when(guestLinkService.create(any(CreateGuestLinkRequest.class)))
@@ -47,6 +52,7 @@ class PublicLinkControllerTest {
         CreateGuestLinkRequest body = new CreateGuestLinkRequest();
         body.setSlug("abc");
         body.setOriginalUrl("https://example.com");
+        body.setTurnstileToken("token");
 
         mockMvc.perform(
                         post("/api/public/links")
@@ -54,6 +60,8 @@ class PublicLinkControllerTest {
                                 .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.shortUrl").value("https://go.example/r/_/abc"));
+
+        verify(turnstileService).verify("token");
     }
 
     @Test

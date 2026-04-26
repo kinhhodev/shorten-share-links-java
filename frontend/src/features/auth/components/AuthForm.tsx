@@ -1,10 +1,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { setAuthUser, setToken } from '@/lib/authStorage';
+import { getInvisibleTurnstileToken } from '@/lib/turnstile';
 import { getErrorMessage, authApi } from '@/services/api';
 import type { AuthResponse } from '@/services/api';
 
@@ -31,9 +32,11 @@ export function AuthForm({
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
+  const [verifyingTurnstile, setVerifyingTurnstile] = useState(false);
+  const turnstileRef = useRef<HTMLDivElement | null>(null);
 
   const loginMutation = useMutation({
-    mutationFn: () => authApi.login({ email, password }),
+    mutationFn: (turnstileToken: string) => authApi.login({ email, password, turnstileToken }),
     onSuccess: (data) => {
       setToken(data.accessToken);
       setAuthUser({
@@ -48,11 +51,12 @@ export function AuthForm({
   });
 
   const registerMutation = useMutation({
-    mutationFn: () =>
+    mutationFn: (turnstileToken: string) =>
       authApi.register({
         email,
         password,
         displayName: displayName.trim() || undefined,
+        turnstileToken,
       }),
     onSuccess: (data) => {
       setToken(data.accessToken);
@@ -67,15 +71,30 @@ export function AuthForm({
     onError: (e) => setFormError(getErrorMessage(e)),
   });
 
-  const busy = loginMutation.isPending || registerMutation.isPending;
+  const busy = loginMutation.isPending || registerMutation.isPending || verifyingTurnstile;
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setFormError(null);
+    if (!turnstileRef.current) {
+      setFormError('Turnstile is not ready.');
+      return;
+    }
+    setVerifyingTurnstile(true);
+    let turnstileToken: string;
+    try {
+      turnstileToken = await getInvisibleTurnstileToken(turnstileRef.current);
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Turnstile verification failed.');
+      setVerifyingTurnstile(false);
+      return;
+    }
+    setVerifyingTurnstile(false);
+
     if (mode === 'login') {
-      loginMutation.mutate();
+      loginMutation.mutate(turnstileToken);
     } else {
-      registerMutation.mutate();
+      registerMutation.mutate(turnstileToken);
     }
   }
 
@@ -117,6 +136,7 @@ export function AuthForm({
       )}
 
       <form onSubmit={onSubmit} className="space-y-4">
+        <div ref={turnstileRef} className="fixed left-0 top-0 h-px w-px overflow-hidden opacity-0" />
         {mode === 'register' && (
           <div>
             <Label htmlFor={pid('displayName')}>Display name (optional)</Label>

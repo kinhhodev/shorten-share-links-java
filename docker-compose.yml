@@ -52,6 +52,7 @@ services:
       OAUTH2_GOOGLE_CLIENT_SECRET: ${OAUTH2_GOOGLE_CLIENT_SECRET}
       OAUTH2_GITHUB_CLIENT_ID: ${OAUTH2_GITHUB_CLIENT_ID}
       OAUTH2_GITHUB_CLIENT_SECRET: ${OAUTH2_GITHUB_CLIENT_SECRET}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY}
     depends_on:
       postgres:
         condition: service_healthy
@@ -59,6 +60,10 @@ services:
         condition: service_healthy
 
   frontend:
+    build:
+      context: ./frontend
+      args:
+        TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY}
     image: hongockinh/shorten-share-links-frontend:latest
     ports:
       - "80:80"

@@ -7,6 +7,7 @@ import com.shortlink.app.api.dto.response.CurrentUserResponse;
 import com.shortlink.app.domain.entity.User;
 import com.shortlink.app.service.AuthService;
 import com.shortlink.app.service.CurrentUserService;
+import com.shortlink.app.service.TurnstileService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -24,15 +25,18 @@ public class AuthController {
 
     private final AuthService authService;
     private final CurrentUserService currentUserService;
+    private final TurnstileService turnstileService;
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     public AuthResponse register(@Valid @RequestBody RegisterRequest request) {
+        turnstileService.verify(request.getTurnstileToken());
         return authService.register(request);
     }
 
     @PostMapping("/login")
     public AuthResponse login(@Valid @RequestBody LoginRequest request) {
+        turnstileService.verify(request.getTurnstileToken());
         return authService.login(request);
     }
 
