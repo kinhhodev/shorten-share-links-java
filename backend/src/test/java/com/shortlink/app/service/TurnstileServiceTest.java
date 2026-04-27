@@ -29,7 +29,7 @@ class TurnstileServiceTest {
         RestClient.Builder builder = RestClient.builder();
         server = MockRestServiceServer.bindTo(builder).build();
         appProperties = new AppProperties();
-        appProperties.getTurnstile().setSecretKey("secret");
+        appProperties.getTurnstile().setSecretKey("0x4AAAAAADDv6bmu4IyhuhtRe06AHAqac9M");
         appProperties.getTurnstile().setVerifyUrl(VERIFY_URL);
         turnstileService = new TurnstileService(builder, appProperties);
     }
@@ -38,7 +38,7 @@ class TurnstileServiceTest {
     void verifyPostsTokenToCloudflare() {
         server.expect(requestTo(VERIFY_URL))
                 .andExpect(method(HttpMethod.POST))
-                .andExpect(content().string(containsString("secret=secret")))
+                .andExpect(content().string(containsString("secret=0x4AAAAAADDv6bmu4IyhuhtRe06AHAqac9M")))
                 .andExpect(content().string(containsString("response=token")))
                 .andRespond(withSuccess("{\"success\":true}", MediaType.APPLICATION_JSON));
 

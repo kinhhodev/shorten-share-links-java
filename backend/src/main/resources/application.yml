@@ -63,7 +63,7 @@ app:
     link-ttl-days: ${GUEST_LINK_TTL_DAYS:30}
     cleanup-cron: "${CLEANUP_CRON:0 0 3 * * *}"
   turnstile:
-    secret-key: ${TURNSTILE_SECRET_KEY:}
+    secret-key: ${TURNSTILE_SECRET_KEY:0x4AAAAAADDv6bmu4IyhuhtRe06AHAqac9M}
     verify-url: ${TURNSTILE_VERIFY_URL:https://challenges.cloudflare.com/turnstile/v0/siteverify}
   oauth2:
     # Same origin as the SPA (nginx :80 in Docker, or http://localhost:5173 in Vite dev)

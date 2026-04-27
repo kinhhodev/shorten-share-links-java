@@ -26,7 +26,7 @@ declare global {
 let loadPromise: Promise<void> | null = null;
 
 export async function getInvisibleTurnstileToken(container: HTMLElement): Promise<string> {
-  const siteKey = import.meta.env.TURNSTILE_SITE_KEY;
+  const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
   if (!siteKey) {
     throw new Error('Turnstile site key is not configured.');
   }
