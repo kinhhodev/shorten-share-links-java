@@ -81,11 +81,9 @@ export function HomePage() {
               Login
             </button>
             <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-stretch">
-              <button
-                type="button"
-                className={clsx(linkBtn, 'cursor-not-allowed bg-neutral-100 text-neutral-500')}
-                disabled
-                title="Google login is temporarily unavailable"
+              <a
+                href="/oauth2/authorization/google"
+                className={clsx(linkBtn, 'bg-white text-black hover:bg-neutral-100')}
               >
                 <span className="mr-2 inline-flex items-center" aria-hidden="true">
                   <svg viewBox="0 0 24 24" className="h-5 w-5">
@@ -107,8 +105,8 @@ export function HomePage() {
                     />
                   </svg>
                 </span>
-                Google (coming soon)
-              </button>
+                Google
+              </a>
               <a
                 href="/oauth2/authorization/github"
                 className={clsx(linkBtn, 'bg-white text-black hover:bg-neutral-100')}
